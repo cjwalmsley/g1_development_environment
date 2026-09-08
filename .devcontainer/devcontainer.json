@@ -1,1 +1,24 @@
-
+{
+  "name": "Unitree G1 ROS 2 Humble Dev Workspace",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "g1-dev-linux",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "jetbrains": {
+      "backend": "clion"
+    },
+    "vscode": {
+      "extensions": [
+        "ms-iot.vscode-ros",
+        "ms-vscode.cpptools",
+        "ms-python.python",
+        "twxs.cmake"
+      ]
+    }
+  },
+  "remoteEnv": {
+    "RMW_IMPLEMENTATION": "rmw_cyclonedds_cpp",
+    "CYCLONEDDS_HOME": "/opt/cyclonedds"
+  },
+  "shutdownAction": "stopCompose"
+}
