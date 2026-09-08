@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # --- x86_64 Linux PC Setup (Direct Hardware Access & Shared Memory) ---
+  g1-dev-linux:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    image: g1-humble-dev:latest
+    container_name: g1_dev_linux
+    network_mode: host                         # Shares host network namespace directly
+    privileged: true                           # Grants root-level access for physical USB/Ethernet
+    ipc: host                                  # Shares the host's IPC namespace for Zero-Copy /dev/shm
+    environment:
+      - DISPLAY=${DISPLAY}                     # Graphical UI forwarding
+      - QT_X11_NO_MITSHM=1
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp  # Direct CycloneDDS integration for physical robot
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw       # Mounts X11 server sockets
+      - /dev/shm:/dev/shm:rw                   # Zero-copy memory map
+      - .:/workspace                           # Mounts workspace directory
+    stdin_open: true
+    tty: true
+
+  # --- Apple Silicon macOS Setup (Virtual Machine Bridge via Zenoh TCP) ---
+  g1-dev-mac:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    image: g1-humble-dev:latest
+    container_name: g1_dev_mac
+    shm_size: '512mb'                          # Allocated shared memory inside macOS VM
+    environment:
+      - DISPLAY=host.docker.internal:0         # XQuartz window forwarding
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp       # Swap default DDS to Zenoh TCP middleware
+      - ZENOH_CONFIG_OVERRIDE=mode="client";connect/endpoints=["tcp/YOUR_LINUX_PC_IP:7447"]
+    volumes:
+      - .:/workspace                           # Mounts workspace directory
+    ports:
+      - "7447:7447"                            # Forward Zenoh Router ports
+    stdin_open: true
+    tty: true
