@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="g1_control_node" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="g1_development_environment_meta_workspace" TARGET_NAME="g1_control_node" CONFIG_NAME="Debug-Docker" RUN_TARGET_PROJECT_NAME="g1_development_environment_meta_workspace" RUN_TARGET_NAME="g1_control_node">
+    <envs>
+      <env name="LD_LIBRARY_PATH" value="/opt/ros/humble/lib:/opt/cyclonedds/lib" />
+      <env name="RMW_IMPLEMENTATION" value="rmw_cyclonedds_cpp" />
+      <env name="HOME" value="/workspace" />
+      <env name="ROS_LOG_DIR" value="/tmp" />
+    </envs>
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeSharedSettings">
+    <configurations>
+      <configuration PROFILE_NAME="Debug-Docker" ENABLED="true" CONFIG_NAME="Debug" TOOLCHAIN_NAME="Docker">
+        <ADDITIONAL_GENERATION_ENVIRONMENT>
+          <envs>
+            <env name="AMENT_PREFIX_PATH" value="/opt/ros/humble" />
+            <env name="CMAKE_PREFIX_PATH" value="/opt/ros/humble" />
+            <env name="LD_LIBRARY_PATH" value="/opt/ros/humble/lib" />
+            <env name="PATH" value="/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" />
+            <env name="PYTHONPATH" value="/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages" />
+            <env name="RMW_IMPLEMENTATION" value="rmw_cyclonedds_cpp" />
+          </envs>
+        </ADDITIONAL_GENERATION_ENVIRONMENT>
+      </configuration>
+    </configurations>
+  </component>
+</project>

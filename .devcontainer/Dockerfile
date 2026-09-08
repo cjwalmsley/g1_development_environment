@@ -9,6 +9,8 @@ ENV LC_ALL=C.UTF-8
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
+    gdb \
+
     git \
     python3-pip \
     python3-colcon-common-extensions \
