@@ -49,3 +49,21 @@ qtcreator-*
 
 # Catkin custom files
 CATKIN_IGNORE
+
+# ROS 2 build directories
+workspace/build/
+workspace/install/
+workspace/log/
+
+# JetBrains IDEs local user configurations
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/shelf/
+cmake-build-*/
+
+# Log files and system artifacts
+*.log
+*.mcap
+.devcontainer/.env
