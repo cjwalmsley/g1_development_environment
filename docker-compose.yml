@@ -22,6 +22,7 @@ services:
 
   # --- Apple Silicon macOS Setup (Virtual Machine Bridge via Zenoh TCP) ---
   g1-dev-mac:
+    platform: linux/arm64
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
