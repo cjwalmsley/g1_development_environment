@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
     libxcb-xinerama0 \
     libxcb-xkb1 \
     libxkbcommon-x11-0 \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Configure rosdep
