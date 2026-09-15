@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# Hardcode absolute project root to prevent symlink path resolution errors
+REPO_DIR="/Users/chris/CLionProjects/g1_development_environment"
+SCRIPT_DIR="${REPO_DIR}/scripts/mac"
 CYCLONE_CONFIG="${SCRIPT_DIR}/cyclonedds_en7.xml"
 IFACE="en7"
 ROBOT_SUBNET_IP="192.168.123.99"
@@ -11,14 +12,29 @@ NETMASK="255.255.255.0"
 
 echo "=== G1 Bridge Orchestrator ==="
 
-# 1. Check if en7 exists
+# 1. Ensure Docker Desktop is Running
+if ! docker info >/dev/null 2>&1; then
+    echo "🐳 Docker daemon is not running. Launching Docker Desktop..."
+    open -a Docker
+    echo -n "   Waiting for Docker to initialize"
+    while ! docker info >/dev/null 2>&1; do
+        echo -n "."
+        sleep 2
+    done
+    echo ""
+    echo "✅ Docker daemon is ready."
+else
+    echo "✅ Docker daemon is active."
+fi
+
+# 2. Check if en7 exists
 if ! ifconfig "${IFACE}" >/dev/null 2>&1; then
     echo "⚠️  Interface ${IFACE} not detected."
     echo "   Please plug in your USB Ethernet adapter and run this script again."
     exit 1
 fi
 
-# 2. Configure Static IP on en7 if not already set
+# 3. Configure Static IP on en7 if not already set
 CURRENT_IP=$(ifconfig "${IFACE}" | awk '/inet / {print $2}')
 if [ "${CURRENT_IP}" != "${ROBOT_SUBNET_IP}" ]; then
     echo "🔧 Setting ${IFACE} IP to ${ROBOT_SUBNET_IP} (requires sudo)..."
@@ -27,7 +43,7 @@ else
     echo "✅ ${IFACE} is configured with IP: ${ROBOT_SUBNET_IP}"
 fi
 
-# 3. Ping Check: Verify Robot Reachability
+# 4. Ping Check: Verify Robot Reachability
 echo "📡 Checking connectivity to G1 robot (${ROBOT_TARGET_IP})..."
 if ping -c 2 -W 1000 -t 2 "${ROBOT_TARGET_IP}" >/dev/null 2>&1; then
     echo "✅ G1 motion controller (${ROBOT_TARGET_IP}) is REACHABLE!"
@@ -36,15 +52,15 @@ else
     echo "   (Check cable or power. The bridge will still start in listening mode)."
 fi
 
-# 4. Clean up any stale host bridge processes
+# 5. Clean up any stale host bridge processes
 if pgrep -f "zenoh-bridge-dds.*7447" >/dev/null 2>&1; then
     echo "🧹 Stopping existing host zenoh-bridge-dds process..."
     pkill -f "zenoh-bridge-dds.*7447" || true
     sleep 1
 fi
 
-# 5. Ensure Docker container is running
-echo "🐳 Verifying Docker container state..."
+# 6. Ensure Docker container is running
+echo "📦 Verifying Docker container state..."
 cd "${REPO_DIR}"
 if ! docker compose ps --services --filter "status=running" | grep -q "g1-dev-mac"; then
     echo "   Starting container g1-dev-mac..."
@@ -53,7 +69,7 @@ else
     echo "✅ Docker container g1-dev-mac is running."
 fi
 
-# 6. Trap Ctrl+C to cleanly stop background processes
+# 7. Trap Ctrl+C to cleanly stop background processes
 cleanup() {
     echo ""
     echo "🛑 Shutting down host zenoh-bridge-dds..."
@@ -64,7 +80,7 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-# 7. Launch macOS Host zenoh-bridge-dds
+# 8. Launch macOS Host zenoh-bridge-dds
 echo "🚀 Starting host zenoh-bridge-dds bound to ${IFACE}..."
 export CYCLONEDDS_URI="file://${CYCLONE_CONFIG}"
 
@@ -73,7 +89,7 @@ BRIDGE_PID=$!
 
 sleep 2
 
-# 8. Check if container bridge linked
+# 9. Check if container bridge linked
 echo "🔗 Checking container bridge link status..."
 docker compose exec g1-dev-mac pgrep -a zenoh-bridge-dds >/dev/null 2>&1 && \
     echo "✅ Container bridge is active and connected to host!" || \
