@@ -29,13 +29,14 @@ services:
     image: g1-humble-dev:latest
     container_name: g1_dev_mac
     shm_size: '512mb'                          # Allocated shared memory inside macOS VM
+    entrypoint: [ "/workspace/.devcontainer/entrypoint.sh" ]
+    command: [ "/bin/bash" ]
     environment:
-      - DISPLAY=host.docker.internal:0         # XQuartz window forwarding
-      - RMW_IMPLEMENTATION=rmw_zenoh_cpp       # Swap default DDS to Zenoh TCP middleware
-      - ZENOH_CONFIG_OVERRIDE=mode="client";connect/endpoints=["tcp/YOUR_LINUX_PC_IP:7447"]
+      - DISPLAY=host.docker.internal:0
+      - ROS_DOMAIN_ID=0
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///workspace/config/cyclonedds.xml
     volumes:
       - .:/workspace                           # Mounts workspace directory
-    ports:
-      - "7447:7447"                            # Forward Zenoh Router ports
     stdin_open: true
     tty: true

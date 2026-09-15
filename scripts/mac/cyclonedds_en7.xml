@@ -3,15 +3,15 @@
   <Domain Id="0">
     <General>
       <Interfaces>
-        <NetworkInterface name="eth0" />
+        <NetworkInterface name="en7" />
       </Interfaces>
       <AllowMulticast>true</AllowMulticast>
       <EnableMulticastLoopback>true</EnableMulticastLoopback>
     </General>
     <Discovery>
       <Peers>
-        <Peer address="127.0.0.1"/>
-        <Peer address="172.18.0.2"/>
+        <Peer address="192.168.123.161"/>
+        <Peer address="192.168.123.164"/>
       </Peers>
       <ParticipantIndex>auto</ParticipantIndex>
     </Discovery>

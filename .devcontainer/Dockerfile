@@ -76,11 +76,18 @@ RUN git clone https://github.com/unitreerobotics/unitree_sdk2_python.git && \
     pip3 install . && \
     pip3 install "numpy<2"
 
+# 6. Add Eclipse Zenoh repo and install zenoh-bridge-dds
+RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | tee /etc/apt/sources.list.d/zenoh.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends zenoh-bridge-dds \
+    && rm -rf /var/lib/apt/lists/*
 
-# 6. Persistent path injection for PyCharm Docker interpreter indexing
+# 7. Persistent path injection for PyCharm Docker interpreter indexing
 RUN echo "/opt/ros/humble/lib/python3.10/site-packages" > /usr/local/lib/python3.10/dist-packages/ros_humble.pth
 
-# 7. Source the ROS 2 Humble setup by default
+# 8. Source the ROS 2 Humble setup by default
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+
+
 
 WORKDIR /workspace
