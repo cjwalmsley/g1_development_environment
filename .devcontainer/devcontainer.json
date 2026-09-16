@@ -2,7 +2,6 @@
   "name": "Unitree G1 ROS 2 Humble Dev Workspace",
   "dockerComposeFile": "../docker-compose.yml",
   "service": "g1-dev-linux",
-  "workspaceFolder": "/workspace",
   "customizations": {
     "jetbrains": {
       "backend": "clion"
@@ -20,5 +19,6 @@
     "RMW_IMPLEMENTATION": "rmw_cyclonedds_cpp",
     "CYCLONEDDS_HOME": "/opt/cyclonedds"
   },
-  "shutdownAction": "stopCompose"
+  "shutdownAction": "stopCompose",
+  "postCreateCommand": "colcon build --build-base /root/build --install-base /root/install"
 }

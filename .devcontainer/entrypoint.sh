@@ -6,6 +6,15 @@ if [ -f "/opt/ros/humble/setup.bash" ]; then
     source /opt/ros/humble/setup.bash
 fi
 
+# Source the native workspace if it exists
+if [ -f "/root/install/setup.bash" ]; then
+    source /root/install/setup.bash
+fi
+
+# Export Zenoh/CycloneDDS variables globally so your terminal inherits them
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=file:///workspace/config/cyclonedds_local.xml
+
 # Function to launch bridge once host port 7447 is reachable
 start_zenoh_bridge() {
     echo "Waiting for Mac host Zenoh router on port 7447..." >> /tmp/zenoh-bridge-dds.log
@@ -13,7 +22,6 @@ start_zenoh_bridge() {
         sleep 2
     done
     echo "Host port 7447 reachable. Launching zenoh-bridge-dds..." >> /tmp/zenoh-bridge-dds.log
-    export CYCLONEDDS_URI=file:///workspace/config/cyclonedds_local.xml
     exec zenoh-bridge-dds -m client -d 0 -e tcp/host.docker.internal:7447 >> /tmp/zenoh-bridge-dds.log 2>&1
 }
 
