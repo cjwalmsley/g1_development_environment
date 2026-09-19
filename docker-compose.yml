@@ -28,6 +28,7 @@ services:
       dockerfile: .devcontainer/Dockerfile
     image: g1-humble-dev:latest
     container_name: g1_dev_mac
+    network_mode: host                         # Shares host network namespace directly
     shm_size: '512mb'                          # Allocated shared memory inside macOS VM
     entrypoint: [ "/workspace/.devcontainer/entrypoint.sh" ]
     command: [ "/bin/bash" ]

@@ -32,6 +32,8 @@ RUN apt-get update && apt-get install -y \
     libxcb-xkb1 \
     libxkbcommon-x11-0 \
     iputils-ping \
+    iproute2 \
+    tcpdump \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Configure rosdep
@@ -77,10 +79,19 @@ RUN git clone https://github.com/unitreerobotics/unitree_sdk2_python.git && \
     pip3 install . && \
     pip3 install "numpy<2"
 
-# 6. Add Eclipse Zenoh repo and install zenoh-bridge-dds
-RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | tee /etc/apt/sources.list.d/zenoh.list > /dev/null \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends zenoh-bridge-dds \
+# 6. Install zenoh-bridge-dds pre-built binary (Ubuntu 22.04 / glibc 2.35 compatible, multi-arch)
+ARG ZENOH_VERSION=1.0.0
+RUN apt-get update && apt-get install -y --no-install-recommends unzip curl ca-certificates \
+    && ARCH=$(dpkg --print-architecture) \
+    && if [ "$ARCH" = "amd64" ]; then ZENOH_ARCH="x86_64-unknown-linux-gnu"; \
+       elif [ "$ARCH" = "arm64" ]; then ZENOH_ARCH="aarch64-unknown-linux-gnu"; \
+       else echo "Unsupported architecture: $ARCH" && exit 1; fi \
+    && curl -fSL "https://download.eclipse.org/zenoh/zenoh-plugin-dds/${ZENOH_VERSION}/zenoh-plugin-dds-${ZENOH_VERSION}-${ZENOH_ARCH}-standalone.zip" -o /tmp/zenoh-bridge-dds.zip \
+    && mkdir -p /tmp/zenoh \
+    && unzip -q /tmp/zenoh-bridge-dds.zip -d /tmp/zenoh \
+    && find /tmp/zenoh -name "zenoh-bridge-dds" -type f -exec cp {} /usr/local/bin/ \; \
+    && chmod +x /usr/local/bin/zenoh-bridge-dds \
+    && rm -rf /tmp/zenoh /tmp/zenoh-bridge-dds.zip \
     && rm -rf /var/lib/apt/lists/*
 
 # 7. Persistent path injection for PyCharm Docker interpreter indexing

@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <CycloneDDS xmlns="https://cdds.io/config">
-  <Domain Id="0">
-    <General>
-      <Interfaces>
-        <NetworkInterface name="eth0" />
-      </Interfaces>
-      <AllowMulticast>true</AllowMulticast>
-      <EnableMulticastLoopback>true</EnableMulticastLoopback>
-    </General>
-    <Discovery>
-      <Peers>
-        <Peer address="127.0.0.1"/>
-        <Peer address="172.18.0.2"/>
-      </Peers>
-      <ParticipantIndex>auto</ParticipantIndex>
-    </Discovery>
-  </Domain>
+    <Domain id="any">
+        <General>
+            <!-- Disable multicast, rely solely on direct IP connection -->
+            <AllowMulticast>false</AllowMulticast>
+        </General>
+        <Discovery>
+            <Peers>
+                <!-- Point directly at the sensory compute IP -->
+                <Peer address="192.168.123.161"/>
+                <Peer address="192.168.123.164"/>
+            </Peers>
+        </Discovery>
+    </Domain>
 </CycloneDDS>
