@@ -31,14 +31,14 @@ docker compose stop g1-dev-mac
 echo "✅ Container stopped."
 
 # 4. Flush en7 IP configuration (Optional)
-if ifconfig "${IFACE}" >/dev/null 2>&1; then
-    CURRENT_IP=$(ifconfig "${IFACE}" | awk '/inet / {print $2}')
-    if [ "${CURRENT_IP}" = "192.168.123.99" ]; then
-        echo "🔧 Removing static IP from ${IFACE} (requires sudo)..."
-        sudo ifconfig "${IFACE}" -alias 192.168.123.99 2>/dev/null || sudo ifconfig "${IFACE}" down
-        echo "✅ ${IFACE} reset."
-    fi
-fi
+#if ifconfig "${IFACE}" >/dev/null 2>&1; then
+#    CURRENT_IP=$(ifconfig "${IFACE}" | awk '/inet / {print $2}')
+#    if [ "${CURRENT_IP}" = "192.168.123.99" ]; then
+#        echo "🔧 Removing static IP from ${IFACE} (requires sudo)..."
+#        sudo ifconfig "${IFACE}" -alias 192.168.123.99 2>/dev/null || sudo ifconfig "${IFACE}" down
+#        echo "✅ ${IFACE} reset."
+#    fi
+#fi
 
 echo ""
 echo "✨ All G1 bridge processes and containers have been cleanly stopped."

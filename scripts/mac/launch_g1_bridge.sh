@@ -35,13 +35,13 @@ if ! ifconfig "${IFACE}" >/dev/null 2>&1; then
 fi
 
 # 3. Configure Static IP on en7 if not already set
-CURRENT_IP=$(ifconfig "${IFACE}" | awk '/inet / {print $2}')
-if [ "${CURRENT_IP}" != "${ROBOT_SUBNET_IP}" ]; then
-    echo "🔧 Setting ${IFACE} IP to ${ROBOT_SUBNET_IP} (requires sudo)..."
-    sudo ifconfig "${IFACE}" inet "${ROBOT_SUBNET_IP}" netmask "${NETMASK}" up
-else
-    echo "✅ ${IFACE} is configured with IP: ${ROBOT_SUBNET_IP}"
-fi
+#CURRENT_IP=$(ifconfig "${IFACE}" | awk '/inet / {print $2}')
+#if [ "${CURRENT_IP}" != "${ROBOT_SUBNET_IP}" ]; then
+#    echo "🔧 Setting ${IFACE} IP to ${ROBOT_SUBNET_IP} (requires sudo)..."
+#    sudo ifconfig "${IFACE}" inet "${ROBOT_SUBNET_IP}" netmask "${NETMASK}" up
+#else
+#    echo "✅ ${IFACE} is configured with IP: ${ROBOT_SUBNET_IP}"
+#fi
 
 # 4. Ping Check: Verify Robot Reachability
 echo "📡 Checking connectivity to G1 robot (${ROBOT_TARGET_IP})..."
