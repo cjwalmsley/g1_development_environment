@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import rclpy
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 from rclpy.node import Node
 
 # Import Unitree custom messages if compiled in your workspace,
@@ -15,14 +16,21 @@ class G1TelemetryListener(Node):
     def __init__(self):
         super().__init__('g1_telemetry_listener')
 
+        # Match the Unitree hardware publisher's QoS settings
+        best_effort_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE
+        )
+
         # Subscribe to G1's high-level locomotion state topic
-        # (Using QoS profile depth 10 for standard telemetry)
         self.subscription = self.create_subscription(
             SportModeState,
-            '/sportmodestate',
+            '/sportmodestate', # Verify this matches `ros2 topic list` exactly
             self.telemetry_callback,
-            10
+            best_effort_qos
         )
+
         self.get_logger().info('G1 Telemetry Listener initialized. Waiting for robot state packets...')
 
     def telemetry_callback(self, msg):
