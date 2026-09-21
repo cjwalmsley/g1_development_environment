@@ -2,8 +2,8 @@
 <CycloneDDS xmlns="https://cdds.io/config">
     <Domain id="any">
         <General>
-            <!-- Disable multicast, rely solely on direct IP connection -->
-            <AllowMulticast>false</AllowMulticast>
+            <AllowMulticast>true</AllowMulticast>
+            <NetworkInterfaceAddress>enp0s1</NetworkInterfaceAddress>
         </General>
         <Discovery>
             <Peers>

@@ -68,3 +68,8 @@ cmake-build-*/
 *.log
 *.mcap
 .devcontainer/.env
+
+# ROS 2 Build Artifacts
+log/
+build/
+install/
