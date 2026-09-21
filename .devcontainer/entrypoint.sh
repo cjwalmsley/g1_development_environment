@@ -12,9 +12,11 @@ if [ -f "/opt/unitree_ws/install/setup.bash" ]; then
 fi
 
 # Source the native workspace if it exists
-if [ -f "/root/install/setup.bash" ]; then
-    source /root/install/setup.bash
+
+if [ -f "/workspace/install/setup.bash" ]; then
+    source /workspace/install/setup.bash
 fi
+
 
 # Export CycloneDDS variables globally so your terminal inherits them
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp

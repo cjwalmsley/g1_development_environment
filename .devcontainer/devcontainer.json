@@ -20,5 +20,5 @@
     "CYCLONEDDS_HOME": "/opt/cyclonedds"
   },
   "shutdownAction": "stopCompose",
-  "postCreateCommand": "colcon build --build-base /root/build --install-base /root/install"
+  "postCreateCommand": "colcon build"
 }

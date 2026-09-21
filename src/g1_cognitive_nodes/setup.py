@@ -19,7 +19,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'telemetry_listener = g1_cognitive_nodes.g1_telemetry_listener:main',
+            'g1_telemetry_listener = g1_cognitive_nodes.g1_telemetry_listener:main',
         ],
     },
 )
