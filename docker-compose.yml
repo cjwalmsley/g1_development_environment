@@ -10,7 +10,7 @@ services:
     privileged: true                           # Grants root-level access for physical USB/Ethernet
     ipc: host                                  # Shares the host's IPC namespace for Zero-Copy /dev/shm
     environment:
-      - DISPLAY=${DISPLAY}                     # Graphical UI forwarding
+      - DISPLAY=${DISPLAY:-}                 # Graphical UI forwarding
       - QT_X11_NO_MITSHM=1
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp  # Direct CycloneDDS integration for physical robot
     volumes:
@@ -33,7 +33,7 @@ services:
     entrypoint: [ "/workspace/.devcontainer/entrypoint.sh" ]
     command: [ "/bin/bash" ]
     environment:
-      - DISPLAY=host.docker.internal:0
+      - DISPLAY=${MAC_DISPLAY:-}
       - ROS_DOMAIN_ID=0
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - CYCLONEDDS_URI=file:///workspace/config/cyclonedds.xml
