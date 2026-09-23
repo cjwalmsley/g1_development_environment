@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 # Note: Replace 'unitree_ros2_messages' with the actual package name of your compiled LowState message
-from unitree_ros2_messages.msg import LowState
+from unitree_go.msg import LowState
 
 
 class G1TelemetryListener(Node):

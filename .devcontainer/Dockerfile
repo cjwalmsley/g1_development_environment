@@ -111,10 +111,6 @@ RUN rm -rf /opt/unitree_ws/src/unitree_ros2 && \
     mkdir -p /opt/unitree_ws/src && \
     git clone --recurse-submodules https://github.com/unitreerobotics/unitree_ros2.git /opt/unitree_ws/src/unitree_ros2
 
-RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
-    cd /opt/unitree_ws && \
-    colcon build --packages-select unitree_go unitree_api"
-
 # Compile the DDS message definitions
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
     cd /opt/unitree_ws && \
@@ -138,6 +134,7 @@ RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
 
 # 7. Persistent path injection for PyCharm Docker interpreter indexing
 RUN echo "/opt/ros/humble/lib/python3.10/site-packages" > /usr/local/lib/python3.10/dist-packages/ros_humble.pth
+RUN echo "/opt/unitree_ws/install/unitree_go/local/lib/python3.10/dist-packages" >> /usr/local/lib/python3.10/dist-packages/ros_humble.pth
 
 # 8. Source the ROS 2 Humble setup by default
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc

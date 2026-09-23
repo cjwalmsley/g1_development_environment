@@ -32,5 +32,11 @@ def generate_launch_description():
             name='g1_telemetry_listener',
             output='screen',
             parameters=[{'use_sim_time': True}]
+        ),
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            output='screen'
         )
     ])
