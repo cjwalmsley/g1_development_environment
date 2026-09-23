@@ -88,7 +88,7 @@ xhost +local:docker
 
 4. Build your `colcon` workspace:
    ```bash
-   cd /workspace/workspace
+   cd /workspace
    colcon build --symlink-install
    source install/setup.bash
    ```

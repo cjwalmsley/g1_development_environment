@@ -6,6 +6,7 @@ services:
       dockerfile: .devcontainer/Dockerfile
     image: g1-humble-dev:latest
     container_name: g1_dev_linux
+    entrypoint: ["/usr/local/bin/g1-entrypoint.sh"]
     network_mode: host                         # Shares host network namespace directly
     privileged: true                           # Grants root-level access for physical USB/Ethernet
     ipc: host                                  # Shares the host's IPC namespace for Zero-Copy /dev/shm
@@ -17,6 +18,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw       # Mounts X11 server sockets
       - /dev/shm:/dev/shm:rw                   # Zero-copy memory map
       - .:/workspace                           # Mounts workspace directory
+    command: ["/bin/bash"]
     stdin_open: true
     tty: true
 
@@ -30,7 +32,7 @@ services:
     container_name: g1_dev_mac
     network_mode: host                         # Shares host network namespace directly
     shm_size: '512mb'                          # Allocated shared memory inside macOS VM
-    entrypoint: [ "/workspace/.devcontainer/entrypoint.sh" ]
+    entrypoint: ["/usr/local/bin/g1-entrypoint.sh"]
     command: [ "/bin/bash" ]
     environment:
       - DISPLAY=${MAC_DISPLAY:-}
@@ -53,6 +55,7 @@ services:
     volumes:
       - ./src:/workspace/src
       - ./config:/workspace/config
+    entrypoint: ["/usr/local/bin/g1-entrypoint.sh"]
     command: python3 /workspace/src/g1_cognitive_nodes/g1_cognitive_nodes/g1_mock_publisher.py
 
   g1_telemetry_listener:
@@ -66,6 +69,7 @@ services:
       volumes:
         - ./src:/workspace/src
         - ./config:/workspace/config
+      entrypoint: ["/usr/local/bin/g1-entrypoint.sh"]
 
 networks:
    g1_sim_net:

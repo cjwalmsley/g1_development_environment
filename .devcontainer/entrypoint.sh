@@ -11,7 +11,13 @@ if [ -f "/opt/unitree_ws/install/setup.bash" ]; then
     source /opt/unitree_ws/install/setup.bash
 fi
 
-# Source the native workspace if it exists
+# Source the application workspace baked into the image.
+if [ -f "/opt/g1_ws/install/setup.bash" ]; then
+    source /opt/g1_ws/install/setup.bash
+fi
+
+# Source the native workspace last so a local build overrides the image
+# version when /workspace/install exists.
 if [ -f "/workspace/install/setup.bash" ]; then
     source /workspace/install/setup.bash
 fi

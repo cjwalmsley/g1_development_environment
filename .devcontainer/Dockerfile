@@ -5,6 +5,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
+COPY .devcontainer/entrypoint.sh /usr/local/bin/g1-entrypoint.sh
+RUN chmod +x /usr/local/bin/g1-entrypoint.sh
+
 # 1. Install system utilities, X11 libraries, and development tools
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -120,16 +123,26 @@ RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
 # Build the g1_description package
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
     cd /opt/unitree_ws && \
-    colcon build --packages-select g1_description"
+    colcon build --packages-select g1_description "
 
 WORKDIR /opt/unitree_ws
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release"
+
+# Build the application workspace into the image so the packages are available
+# even when the runtime container only mounts selected workspace directories.
+WORKDIR /opt/g1_ws
+COPY src /opt/g1_ws/src
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
+    source /opt/unitree_ws/install/setup.bash && \
+    colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # 7. Persistent path injection for PyCharm Docker interpreter indexing
 RUN echo "/opt/ros/humble/lib/python3.10/site-packages" > /usr/local/lib/python3.10/dist-packages/ros_humble.pth
 
 # 8. Source the ROS 2 Humble setup by default
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/unitree_ws/install/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/g1_ws/install/setup.bash" >> ~/.bashrc
 
 
 
