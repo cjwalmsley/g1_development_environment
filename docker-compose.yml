@@ -41,3 +41,32 @@ services:
       - .:/workspace                           # Mounts workspace directory
     stdin_open: true
     tty: true
+
+  g1_simulator:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    networks:
+      - g1_sim_net
+    environment:
+      - CYCLONEDDS_URI=file:///workspace/config/cyclonedds_local.xml
+    volumes:
+      - ./src:/workspace/src
+      - ./config:/workspace/config
+    command: python3 /workspace/src/g1_cognitive_nodes/g1_cognitive_nodes/g1_mock_publisher.py
+
+  g1_telemetry_listener:
+      build:
+        context: .
+        dockerfile: .devcontainer/Dockerfile
+      networks:
+        - g1_sim_net
+      environment:
+        - CYCLONEDDS_URI=file:///workspace/config/cyclonedds_local.xml
+      volumes:
+        - ./src:/workspace/src
+        - ./config:/workspace/config
+
+networks:
+   g1_sim_net:
+     driver: bridge

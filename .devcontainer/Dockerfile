@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y \
     iputils-ping \
     iproute2 \
     tcpdump \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Configure rosdep
@@ -83,6 +84,43 @@ RUN git clone https://github.com/unitreerobotics/unitree_sdk2_python.git && \
 WORKDIR /opt/unitree_ws/src
 RUN git clone --recurse-submodules https://github.com/unitreerobotics/unitree_ros2.git && \
     touch unitree_ros2/example/COLCON_IGNORE
+
+# Sparse clone and synthesize the missing ROS 2 build files
+RUN mkdir -p /opt/unitree_ws/src && \
+    cd /opt/unitree_ws/src && \
+    git clone --filter=blob:none --no-checkout https://github.com/unitreerobotics/unitree_ros.git unitree_ros && \
+    cd unitree_ros && \
+    git sparse-checkout set robots/g1_description && \
+    git checkout && \
+    cd robots/g1_description && \
+    echo '<?xml version="1.0"?>' > package.xml && \
+    echo '<package format="3"><name>g1_description</name><version>1.0.0</version><description>G1</description><maintainer email="dev@dev.com">dev</maintainer><license>BSD</license><buildtool_depend>ament_cmake</buildtool_depend><export><build_type>ament_cmake</build_type></export></package>' >> package.xml && \
+    echo 'cmake_minimum_required(VERSION 3.8)' > CMakeLists.txt && \
+    echo 'project(g1_description)' >> CMakeLists.txt && \
+    echo 'find_package(ament_cmake REQUIRED)' >> CMakeLists.txt && \
+    echo 'install(DIRECTORY meshes DESTINATION share/${PROJECT_NAME})' >> CMakeLists.txt && \
+    echo 'install(FILES g1_29dof_with_hand_rev_1_0.urdf g1_29dof_with_hand_rev_1_0.xml DESTINATION share/${PROJECT_NAME})' >> CMakeLists.txt && \
+    echo 'ament_package()' >> CMakeLists.txt
+
+# Clone the official Unitree ROS 2 repository into the underlay workspace
+# Purge existing directory, clone the repository, and compile
+RUN rm -rf /opt/unitree_ws/src/unitree_ros2 && \
+    mkdir -p /opt/unitree_ws/src && \
+    git clone --recurse-submodules https://github.com/unitreerobotics/unitree_ros2.git /opt/unitree_ws/src/unitree_ros2
+
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
+    cd /opt/unitree_ws && \
+    colcon build --packages-select unitree_go unitree_api"
+
+# Compile the DDS message definitions
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
+    cd /opt/unitree_ws && \
+    colcon build --packages-select unitree_go unitree_api"
+
+# Build the g1_description package
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
+    cd /opt/unitree_ws && \
+    colcon build --packages-select g1_description"
 
 WORKDIR /opt/unitree_ws
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release"
