@@ -38,6 +38,7 @@ RUN apt-get update && apt-get install -y \
     iproute2 \
     tcpdump \
     git \
+    mesa-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Configure rosdep
