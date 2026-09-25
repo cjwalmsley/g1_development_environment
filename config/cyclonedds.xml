@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<CycloneDDS xmlns="https://cdds.io/config">
+<CycloneDDS xmlns="https://cdds.io/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
     <Domain id="any">
         <General>
-            <AllowMulticast>true</AllowMulticast>
-            <NetworkInterfaceAddress>enp0s1</NetworkInterfaceAddress>
+            <AllowMulticast>false</AllowMulticast>
+            <Interfaces>
+                <!-- Update to the new VM IP -->
+                <NetworkInterface address="192.168.123.223"/>
+            </Interfaces>
         </General>
         <Discovery>
             <Peers>
-                <!-- Point directly at the sensory compute IP -->
                 <Peer address="192.168.123.161"/>
                 <Peer address="192.168.123.164"/>
+                <Peer address="127.0.0.1"/>
+                <!-- Update to the new VM IP -->
+                <Peer address="192.168.123.223"/>
             </Peers>
         </Discovery>
     </Domain>

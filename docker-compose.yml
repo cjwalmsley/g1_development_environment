@@ -68,14 +68,14 @@ services:
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
-    networks:
-      - g1_sim_net
+    network_mode: host
     environment:
-      - CYCLONEDDS_URI=file:///workspace/config/cyclonedds_local.xml
+      - CYCLONEDDS_URI=file:///workspace/config/cyclonedds.xml
     volumes:
       - ./src:/workspace/src
       - ./config:/workspace/config
     entrypoint: [ "/usr/local/bin/g1-entrypoint.sh" ]
+    command: [ "ros2", "launch", "g1_cognitive_nodes", "g1_sim_visualisation.launch.py" ]
 
 networks:
   g1_sim_net:
