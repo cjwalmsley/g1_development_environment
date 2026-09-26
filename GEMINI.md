@@ -71,7 +71,7 @@ colcon test
 colcon test-result --verbose
 
 # Python tests with pytest
-cd /workspace/src/g1_cognitive_nodes && pytest
+cd /workspace/src/g1_cognitive_nodes && python3 -m pytest
 
 # Import verification
 python3 /workspace/src/test_imports.py

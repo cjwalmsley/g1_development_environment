@@ -308,6 +308,9 @@ When creating a new ROS 2 package:
 # Run the import smoke test
 python3 /workspace/src/test_imports.py
 
+# Run pytest directly (note: use python3 -m pytest, not pytest — the binary is not on PATH)
+python3 -m pytest src/g1_cognitive_nodes/test/ -v
+
 # Run colcon tests (when test packages are added)
 colcon test
 colcon test-result --verbose
@@ -315,7 +318,7 @@ colcon test-result --verbose
 
 ### Adding tests
 
-- **Python**: Create `test/` directory in the package, add `test_*.py` files, use `pytest`
+- **Python**: Create `test/` directory in the package, add `test_*.py` files, run with `python3 -m pytest` (the `pytest` binary is not on PATH in the container)
 - **C++**: Add `ament_cmake_gtest` to `package.xml`, write GTest cases, add `ament_add_gtest()` to CMakeLists
 
 ---
