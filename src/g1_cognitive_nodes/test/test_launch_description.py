@@ -6,6 +6,7 @@ configuration.  They require the ``g1_description`` package to be installed
 (available inside the Docker container's Unitree underlay).
 """
 
+import importlib.util
 import os
 
 import pytest
@@ -33,11 +34,17 @@ class TestLaunchDescription:
 
     @pytest.fixture(autouse=True)
     def launch_desc(self):
-        from g1_cognitive_nodes.launch.g1_sim_visualisation_launch import (
-            generate_launch_description,
+        launch_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "launch",
+            "g1_sim_visualisation.launch.py",
         )
-
-        self._ld = generate_launch_description()
+        spec = importlib.util.spec_from_file_location(
+            "g1_sim_visualisation_launch", launch_file
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self._ld = mod.generate_launch_description()
 
     def _get_node_actions(self):
         """Extract Node actions from the launch description."""

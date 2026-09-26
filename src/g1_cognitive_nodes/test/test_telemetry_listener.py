@@ -1,6 +1,6 @@
 """Unit tests for G1TelemetryListener node callback and pub/sub wiring."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from sensor_msgs.msg import JointState
@@ -50,14 +50,14 @@ class TestTelemetryListenerNode:
 
     def test_subscriber_exists(self):
         """Node must have at least one subscription (to /lowstate)."""
-        subs = self._node.subscriptions
+        subs = list(self._node.subscriptions)
         assert len(subs) >= 1
         topic_names = [s.topic_name for s in subs]
         assert "/lowstate" in topic_names
 
     def test_publisher_exists(self):
         """Node must have a publisher on /joint_states."""
-        pubs = self._node.publishers
+        pubs = list(self._node.publishers)
         # Filter out internal /rosout and /parameter_events publishers
         user_pubs = [
             p for p in pubs if p.topic_name not in ("/rosout", "/parameter_events")

@@ -51,7 +51,8 @@ class G1TelemetryListener(Node):
         ]
 
         # Define the 14 Dex3-1 hand joints (7 per hand)
-        # You must cross-reference these exact string names with your g1_29dof_with_hand_rev_1_0.urdf file
+        # You must cross-reference these exact string names with your
+        # g1_29dof_with_hand_rev_1_0.urdf file
         self.hand_joints = [
             "l_thumb_pitch",
             "l_thumb_roll",

@@ -9,7 +9,6 @@ Requires the Unitree message packages (unitree_hg) to be installed,
 so this test is designed to run inside the Docker container.
 """
 
-import threading
 import time
 
 import pytest
