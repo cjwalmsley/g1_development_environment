@@ -1,0 +1,10 @@
+#include "g1_control_nodes/g1_control_node.hpp"
+
+int main(int argc, char **argv) {
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<G1ControlNode>();
+    RCLCPP_INFO(node->get_logger(), "Hello G1! ROS 2 Humble node is running inside CLion.");
+    rclcpp::spin(node);
+    rclcpp::shutdown();
+    return 0;
+}
