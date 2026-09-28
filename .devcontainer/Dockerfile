@@ -142,6 +142,7 @@ RUN echo "/opt/unitree_ws/install/unitree_go/local/lib/python3.10/dist-packages"
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
 RUN echo "source /opt/unitree_ws/install/setup.bash" >> ~/.bashrc
 RUN echo "source /opt/g1_ws/install/setup.bash" >> ~/.bashrc
+RUN echo "source /workspace/install/setup.bash" >> ~/.bashrc
 
 
 

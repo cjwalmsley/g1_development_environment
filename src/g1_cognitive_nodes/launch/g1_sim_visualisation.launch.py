@@ -5,6 +5,8 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 
+from launch.actions import TimerAction
+
 def generate_launch_description():
     # Locate the synthesized URDF package from the underlay workspace
     g1_description_pkg = get_package_share_directory('g1_description')
@@ -14,11 +16,24 @@ def generate_launch_description():
     with open(urdf_file, 'r') as infp:
         robot_description_content = infp.read()
 
+    # Fix broken relative mesh paths in the Unitree URDF
+    robot_description_content = robot_description_content.replace(
+        'filename="meshes/', 'filename="package://g1_description/meshes/'
+    )
+
     robot_description = {'robot_description': robot_description_content}
 
     # Locate the RViz config shipped with this package
     cognitive_pkg = get_package_share_directory('g1_cognitive_nodes')
     rviz_config = os.path.join(cognitive_pkg, 'config', 'g1_default.rviz')
+
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        output='screen',
+        arguments=['-d', rviz_config]
+    )
 
     return LaunchDescription([
         # Launch the standard robot_state_publisher to compute the TF tree
@@ -37,11 +52,10 @@ def generate_launch_description():
             output='screen',
             parameters=[{'use_sim_time': False}]
         ),
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            output='screen',
-            arguments=['-d', rviz_config]
+        # Delay RViz2 to ensure robot_state_publisher is fully up and has 
+        # published /robot_description and /tf_static before RViz connects.
+        TimerAction(
+            period=3.0,
+            actions=[rviz_node]
         )
     ])
