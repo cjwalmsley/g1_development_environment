@@ -16,6 +16,10 @@ def generate_launch_description():
 
     robot_description = {'robot_description': robot_description_content}
 
+    # Locate the RViz config shipped with this package
+    cognitive_pkg = get_package_share_directory('g1_cognitive_nodes')
+    rviz_config = os.path.join(cognitive_pkg, 'config', 'g1_default.rviz')
+
     return LaunchDescription([
         # Launch the standard robot_state_publisher to compute the TF tree
         Node(
@@ -23,7 +27,7 @@ def generate_launch_description():
             executable='robot_state_publisher',
             name='robot_state_publisher',
             output='screen',
-            parameters=[robot_description, {'use_sim_time': True}]
+            parameters=[robot_description, {'use_sim_time': False}]
         ),
         # Launch your custom cognitive telemetry bridge
         Node(
@@ -31,12 +35,13 @@ def generate_launch_description():
             executable='g1_telemetry_listener',
             name='g1_telemetry_listener',
             output='screen',
-            parameters=[{'use_sim_time': True}]
+            parameters=[{'use_sim_time': False}]
         ),
         Node(
             package='rviz2',
             executable='rviz2',
             name='rviz2',
-            output='screen'
+            output='screen',
+            arguments=['-d', rviz_config]
         )
     ])
