@@ -97,6 +97,7 @@ RUN mkdir -p /opt/unitree_ws/src && \
     git sparse-checkout set robots/g1_description && \
     git checkout && \
     cd robots/g1_description && \
+    sed -i 's|filename="meshes/|filename="package://g1_description/meshes/|g' g1_29dof_with_hand_rev_1_0.urdf && \
     echo '<?xml version="1.0"?>' > package.xml && \
     echo '<package format="3"><name>g1_description</name><version>1.0.0</version><description>G1</description><maintainer email="dev@dev.com">dev</maintainer><license>BSD</license><buildtool_depend>ament_cmake</buildtool_depend><export><build_type>ament_cmake</build_type></export></package>' >> package.xml && \
     echo 'cmake_minimum_required(VERSION 3.8)' > CMakeLists.txt && \
