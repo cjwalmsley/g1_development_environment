@@ -1,4 +1,5 @@
 # g1_development_environment
+
 This repository provides a multi-platform containerised development environment designed specifically for the Unitree G1 edu+ humanoid robot. It supports native C++ and Python development using JetBrains CLion and PyCharm across both x86_64 Linux PCs (Ubuntu 24.04 hosts) and Apple Silicon MacBooks (M2, arm64).
 
 # 🤖 Unitree G1 development environment Workspace
@@ -16,21 +17,22 @@ This structure separates custom code from Docker environments and keeps your Git
 ```text
 g1_development_environment/           # Git Repository Root
 ├── .devcontainer/
-│   ├── devcontainer.json       # Headless Dev Container configuration
-│   └── Dockerfile              # ROS 2 Humble base image + CycloneDDS 0.10.2 + SDK
+│   ├── Dockerfile              # Multi-arch image: ROS 2 Humble + CycloneDDS 0.10.2 + Unitree SDK
+│   ├── devcontainer.json       # VS Code / JetBrains Gateway dev-container config
+│   └── entrypoint.sh           # Sources ROS 2 + Unitree underlay + workspace overlays
 ├── .idea/                      # Shared IDE settings (Tracked via VCS)
 │   ├── runConfigurations/      # Shared CLion & PyCharm execution variables
-│   └── misc.xml                # Shared CMake Profiles and Toolchain links
+│   └── cmake.xml               # Shared CMake Profiles and Toolchain links
 ├── config/
-│   ├── cyclonedds.xml          # DDS network configurations for physical robot
-│   └── zenoh_router.json5      # Zenoh router configuration for macOS bridging
-├── workspace/                  # Mounted colcon workspace
-│   ├── src/                    # Custom ROS 2 Packages
-│   │   ├── g1_control_nodes/   # Low-level C++ control & manipulation nodes
-│   │   └── g1_cognitive_nodes/ # High-level Python cognitive & behavior tree nodes
-│   └── data/                   # Log captures (MCAP files, logging)
+│   └── cyclonedds.xml          # DDS network configurations for physical robot
+├── src/                        # Custom ROS 2 Packages (colcon workspace source space)
+│   ├── g1_control_nodes/       # Low-level C++ control & manipulation nodes
+│   ├── g1_cognitive_nodes/     # High-level Python cognitive & behavior tree nodes
+│   └── test_imports.py         # Quick smoke-test for rclpy + unitree_sdk2py
 ├── docker-compose.yml          # Container configuration for Linux & macOS
-├── CMakeLists.txt              # Meta-CMake configuration for root-level CLion indexing
+├── .env / .env.example         # DISPLAY forwarding variables
+├── AGENTS.md                   # Canonical AI coding agent reference
+├── GEMINI.md                   # Gemini context file
 └── README.md                   # This file
 ```
 
@@ -72,7 +74,7 @@ xhost +local:docker
      ```bash
      docker compose up -d g1-dev-linux
      ```
-   * **For macOS MacBook M2 (Zenoh TCP Bridging):**
+   * **For macOS MacBook M2 (arm64):**
      ```bash
      docker compose up -d g1-dev-mac
      ```
@@ -86,7 +88,7 @@ xhost +local:docker
    docker exec -it g1_dev_mac bash
    ```
 
-4. Build your `colcon` workspace:
+4. Build your `colcon` workspace (inside the container):
    ```bash
    cd /workspace
    colcon build --symlink-install
@@ -111,12 +113,12 @@ Rather than compiling on your host machine, CLion runs all compilations and debu
 3. **Configure the CMake Profile**:
    * Go to **Build, Execution, Deployment** ➔ **CMake**.
    * Change your **Toolchain** setting to your new **Docker** toolchain.
-   * Under **Build directory**, specify `workspace/build` to match `colcon`.
+   * Under **Build directory**, specify `build` to match `colcon`.
    * Paste this exact string into the **Environment** variable field to map ROS 2's Python dependencies, paths, and DDS middleware:
      ```text
-     AMENT_PREFIX_PATH=/opt/ros/humble;CMAKE_PREFIX_PATH=/opt/ros/humble;PYTHONPATH=/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages;LD_LIBRARY_PATH=/opt/ros/humble/lib;RMW_IMPLEMENTATION=rmw_cyclonedds_cpp;PATH=/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+     AMENT_PREFIX_PATH=/opt/ros/humble;CMAKE_PREFIX_PATH=/opt/ros/humble;PYTHONPATH=/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages;LD_LIBRARY_PATH=/opt/ros/humble/lib:/opt/cyclonedds/lib;RMW_IMPLEMENTATION=rmw_cyclonedds_cpp;PATH=/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
      ```
-   * Check the **Share** box next to your Debug profile to save these variables to `.idea/misc.xml` for GitHub.
+   * Check the **Share** box next to your Debug profile to save these variables to `.idea/cmake.xml` for GitHub.
 
 ---
 
@@ -151,15 +153,14 @@ ROS_LOG_DIR=/tmp
 
 ---
 
-## 📡 6. Network Topology: Shared Memory & Zenoh TCP Bridging
+## 📡 6. Network Topology: Shared Memory & DDS Bridging
 
 ### Physical Hardware Control (Linux Host)
 On your Linux PCs, the container is spawned with `--net=host` and maps `-v /dev/shm:/dev/shm`.
 * **DDS Discovery:** This shares the physical host interfaces directly. Your container can dynamically discover and handshake with the Unitree G1 robot over Wi-Fi or local Ethernet.
-* **Zero-Copy IPC:** High-bandwidth data streams (camera frames and LiDAR point clouds) bypass the IP network stack entirely via shared memory, minimizing CPU overhead and communication latency.
+* **Zero-Copy IPC:** High-bandwidth data streams bypass the IP network stack entirely via shared memory, minimizing CPU overhead and communication latency.
 
 ### Virtual Remote Monitoring (MacBook M2 Host)
 Docker on macOS runs within a virtual machine, meaning it cannot bind to the host’s physical multicast interface. 
-* To monitor or command the robot from your MacBook, we swap the middleware implementation to **Zenoh** by setting `export RMW_IMPLEMENTATION=rmw_zenoh_cpp`.
-* Start a Zenoh router daemon on your local network (usually on your Linux PC or a dedicated gateway) on port `7447`.
-* The MacBook container uses standard TCP unicast to connect directly to the router endpoint over your local Wi-Fi, routing all ROS 2 traffic smoothly through the VM bridge.
+* By default, bridging is handled using `rmw_cyclonedds_cpp` with CycloneDDS unicast over the VM network directly.
+* Alternative: to monitor or command the robot from your MacBook using TCP-based bridging, you can swap the middleware implementation to **Zenoh** (`rmw_zenoh_cpp`) and start a Zenoh router daemon on your local network (e.g., on your Linux PC) on port `7447`.
