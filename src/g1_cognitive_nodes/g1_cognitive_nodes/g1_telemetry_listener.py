@@ -1,26 +1,33 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data  # Import the required QoS profile
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import JointState
-from unitree_hg.msg import LowState  # Ensure humanoid IDL is used
+from unitree_hg.msg import LowState, HandState
 import math
-
 
 class G1TelemetryListener(Node):
     def __init__(self):
         super().__init__("g1_telemetry_listener")
 
-        # Subscribe using the Best Effort Sensor Data QoS profile
+        self.left_hand_positions = [0.0] * 7
+        self.right_hand_positions = [0.0] * 7
+
+        # Subscribers
         self.subscription = self.create_subscription(
             LowState, "/lowstate", self.lowstate_callback, qos_profile_sensor_data
         )
 
-        # Publishes the standard joint states for the robot_state_publisher
+        # Reliable QoS (10) to match the robot's DDS endpoint and prevent discovery crashes
+        self.left_hand_sub = self.create_subscription(
+            HandState, "/lf/dex3/left/state", self.left_hand_callback, 10
+        )
+        self.right_hand_sub = self.create_subscription(
+            HandState, "/lf/dex3/right/state", self.right_hand_callback, 10
+        )
+
+        # Publishers
         self.publisher_ = self.create_publisher(JointState, "/joint_states", 10)
 
-        # Define the exact 29 main body joints in hardware index order.
-        # Names must match the URDF joint names exactly for
-        # robot_state_publisher to compute the TF tree.
         self.body_joints = [
             "left_hip_pitch_joint",
             "left_hip_roll_joint",
@@ -53,8 +60,6 @@ class G1TelemetryListener(Node):
             "right_wrist_yaw_joint",
         ]
 
-        # Define the 14 Dex3-1 hand joints (7 per hand).
-        # Names must match the URDF joint names exactly.
         self.hand_joints = [
             "left_hand_thumb_0_joint",
             "left_hand_thumb_1_joint",
@@ -72,22 +77,38 @@ class G1TelemetryListener(Node):
             "right_hand_middle_1_joint",
         ]
 
+    def _map_hand_motors(self, motor_states):
+        positions = []
+        for i in range(7):
+            if i < len(motor_states):
+                q = motor_states[i].q
+                positions.append(0.0 if math.isnan(q) or math.isinf(q) else q)
+            else:
+                positions.append(0.0)
+        return positions
+
+    def left_hand_callback(self, msg):
+        self.left_hand_positions = self._map_hand_motors(msg.motor_state)
+
+    def right_hand_callback(self, msg):
+        self.right_hand_positions = self._map_hand_motors(msg.motor_state)
+
     def lowstate_callback(self, msg):
         joint_state_msg = JointState()
         joint_state_msg.header.stamp = self.get_clock().now().to_msg()
         joint_state_msg.name = self.body_joints + self.hand_joints
 
         body_positions = []
-        for motor in msg.motor_state[:29]:
-            q = motor.q
-            if math.isnan(q) or math.isinf(q):
-                q = 0.0
-            body_positions.append(q)
-        hand_positions = [0.0] * 14
-
+        for i in range(29):
+            if i < len(msg.motor_state):
+                q = msg.motor_state[i].q
+                body_positions.append(0.0 if math.isnan(q) or math.isinf(q) else q)
+            else:
+                body_positions.append(0.0)
+        
+        hand_positions = self.left_hand_positions + self.right_hand_positions
         joint_state_msg.position = body_positions + hand_positions
         self.publisher_.publish(joint_state_msg)
-
 
 def main(args=None):
     rclpy.init(args=args)
@@ -95,7 +116,6 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == "__main__":
     main()
