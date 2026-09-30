@@ -3,6 +3,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data  # Import the required QoS profile
 from sensor_msgs.msg import JointState
 from unitree_hg.msg import LowState  # Ensure humanoid IDL is used
+import math
 
 
 class G1TelemetryListener(Node):
@@ -76,8 +77,12 @@ class G1TelemetryListener(Node):
         joint_state_msg.header.stamp = self.get_clock().now().to_msg()
         joint_state_msg.name = self.body_joints + self.hand_joints
 
-        # Extract the 29 position values (q) from LowState and append 14 static zeros for the hands
-        body_positions = [motor.q for motor in msg.motor_state[:29]]
+        body_positions = []
+        for motor in msg.motor_state[:29]:
+            q = motor.q
+            if math.isnan(q) or math.isinf(q):
+                q = 0.0
+            body_positions.append(q)
         hand_positions = [0.0] * 14
 
         joint_state_msg.position = body_positions + hand_positions

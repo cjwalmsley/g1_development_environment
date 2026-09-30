@@ -5,17 +5,24 @@
         <General>
             <AllowMulticast>spdp</AllowMulticast>
             <Interfaces>
-                <!-- Auto-select interface; allows local + robot discovery -->
-                <NetworkInterface autodetermine="true"/>
+                <!-- ORDER MATTERS: CycloneDDS uses the first interface as the
+                     primary data transport.
+                     1. enp0s2  (primary)  — robot ethernet subnet (192.168.123.x)
+                     2. enp0s1  (secondary) — VM bridge, enables local inter-node
+                        discovery when multiple DDS processes run on this host.
+                     If your interfaces differ, run 'ip link' to check names. -->
+                <NetworkInterface name="enp0s2"/>
+                <NetworkInterface name="enp0s1"/>
             </Interfaces>
         </General>
         <Discovery>
             <Peers>
-                <Peer address="localhost"/>
+                <!-- VM's own IPs — enables local inter-node discovery -->
+                <Peer address="192.168.123.223"/>
+                <Peer address="192.168.64.5"/>
+                <!-- Unitree G1 robot addresses -->
                 <Peer address="192.168.123.161"/>
                 <Peer address="192.168.123.164"/>
-                <!-- VM IP (update to match your VM/host IP) -->
-                <Peer address="192.168.123.223"/>
             </Peers>
         </Discovery>
     </Domain>
