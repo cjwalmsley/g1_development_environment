@@ -31,7 +31,7 @@ It provides:
 |--------------------|----------------------------------------------|----------------------------------------|
 | OS (container)     | Ubuntu 22.04 LTS                             | `ros:humble-ros-base` Docker image     |
 | ROS distribution   | ROS 2 Humble Hawksbill                       | EOL May 2027                           |
-| DDS middleware      | Eclipse CycloneDDS **0.10.2**               | Compiled from source — Unitree pinned  |
+| DDS middleware      | Eclipse CycloneDDS **0.10.5**               | Compiled from source — Unitree pinned  |
 | Alt. middleware     | Zenoh (`rmw_zenoh_cpp`)                     | TCP bridge for macOS VM hosts          |
 | Robot SDK          | `unitree_sdk2_python`                        | Pip-installed from GitHub              |
 | Robot messages     | `unitree_go`, `unitree_api`, `unitree_hg`   | Colcon-built underlay at `/opt/unitree_ws` |
@@ -61,7 +61,7 @@ g1_development_environment/
 │       ├── g1_control_node.xml
 │       └── g1_telemetry_listener.xml
 ├── config/
-│   └── cyclonedds.xml          # DDS peer discovery (robot IPs + loopback)
+│   └── cyclonedds.xml          # DDS network interface binding + peer discovery
 ├── src/                        # ← colcon workspace source space
 │   ├── g1_cognitive_nodes/     # Python package (ament_python)
 │   │   ├── g1_cognitive_nodes/
@@ -329,18 +329,76 @@ colcon test-result --verbose
 
 - Container runs with `--net=host` and `--ipc=host`
 - Shares `/dev/shm` for zero-copy IPC
-- CycloneDDS configured with unicast peer discovery (multicast disabled)
+- CycloneDDS configured with unicast peer discovery (multicast limited to SPDP)
 - Robot addresses: `192.168.123.161` (main), `192.168.123.164` (secondary)
 
-### macOS bridging
+### macOS bridging (Apple Silicon via UTM)
 
 - Uses `rmw_cyclonedds_cpp` with CycloneDDS unicast over the VM network
+- The UTM VM typically exposes **two NICs** to the container:
+  - `enp0s1` — VM bridge network (e.g. `192.168.64.x`), used for host ↔ VM traffic
+  - `enp0s2` — Robot ethernet subnet (e.g. `192.168.123.x`), passthrough to the G1
 - Alternative: swap to `rmw_zenoh_cpp` for TCP-based bridging via Zenoh router on port `7447`
 - GPU passthrough via `/dev/dri`
+
+### CycloneDDS interface ordering (critical)
+
+> **⚠️ Interface order in `cyclonedds.xml` is critical when the host has
+> multiple NICs.** CycloneDDS 0.10.x uses the **first listed interface** as the
+> primary data transport channel. Incorrect ordering causes either robot
+> discovery failure or broken inter-node communication.
+
+The `config/cyclonedds.xml` must list interfaces in this order:
+
+```xml
+<Interfaces>
+    <NetworkInterface name="enp0s2"/>   <!-- 1st: robot subnet (primary) -->
+    <NetworkInterface name="enp0s1"/>   <!-- 2nd: VM bridge (local discovery) -->
+</Interfaces>
+```
+
+The peer list must include both the VM's own IPs (for local inter-node
+discovery) and the robot addresses:
+
+```xml
+<Peers>
+    <Peer address="192.168.123.223"/>   <!-- VM self-IP on robot subnet -->
+    <Peer address="192.168.64.5"/>      <!-- VM self-IP on bridge -->
+    <Peer address="192.168.123.161"/>   <!-- G1 primary -->
+    <Peer address="192.168.123.164"/>   <!-- G1 secondary -->
+</Peers>
+```
+
+**What goes wrong with other orderings:**
+
+| Interface config | Local node comms | Robot `/lowstate` | Result |
+|-----------------|:----------------:|:-----------------:|--------|
+| `autodetermine` (picks `enp0s1`) | ✅ | ❌ | RViz runs but no joint data — TF tree is static-only |
+| `enp0s2` only | ❌ | ✅ | Robot data flows but nodes can't talk to each other |
+| `lo` + `enp0s2` | ❌ | ❌ | DDS binds to loopback, nothing works |
+| `enp0s1`, `enp0s2` | ✅ | ❌ | Primary is VM bridge — robot not reachable |
+| **`enp0s2`, `enp0s1`** | **✅** | **✅** | **Correct — robot primary, bridge secondary** |
 
 ### Adding a new peer
 
 Edit `config/cyclonedds.xml` and add a `<Peer address="..."/>` entry inside `<Peers>`.
+
+### Verifying DDS connectivity
+
+```bash
+# Inside the container — check robot data is flowing:
+ros2 topic hz /lowstate          # Should show ~1000 Hz from robot
+ros2 topic hz /joint_states      # Should match /lowstate rate
+ros2 topic hz /tf                # Should match /joint_states rate
+
+# Check node discovery:
+ros2 node list                   # Should list all running nodes
+ros2 topic info /lowstate        # Publisher count should be > 0
+
+# Check network interfaces:
+ip link                          # Lists available NICs
+ip addr show enp0s2              # Verify robot subnet IP
+```
 
 ---
 
@@ -364,7 +422,8 @@ The entrypoint sources workspaces in this order (later overlays override earlier
 | SIGSEGV exit 139 on node start | `HOME` or `ROS_LOG_DIR` not set | Set `HOME=/workspace` and `ROS_LOG_DIR=/tmp` |
 | "No module named unitree_hg" | Unitree underlay not sourced | `source /opt/unitree_ws/install/setup.bash` |
 | RViz2 blank / X11 error | X11 forwarding not configured | Run `xhost +local:docker` on host |
-| CycloneDDS can't find robot | Wrong IP in `cyclonedds.xml` | Update `<NetworkInterface>` and `<Peer>` addresses |
+| CycloneDDS can't find robot | Wrong IP or interface order in `cyclonedds.xml` | Update `<NetworkInterface>` and `<Peer>` addresses. Ensure robot NIC is listed first. |
+| RViz shows "No transform" for revolute joints | `cyclonedds.xml` missing VM bridge interface | Add VM bridge NIC (e.g. `enp0s1`) as a secondary `<NetworkInterface>` to enable local node discovery. |
 | colcon build fails with missing deps | Underlays not sourced before build | Source entrypoint or run `source /opt/ros/humble/setup.bash && source /opt/unitree_ws/install/setup.bash` first |
 | NumPy 2.x breaks Unitree SDK | Default pip installs NumPy 2.x | Ensure `numpy<2` is pinned |
 | `qt.qpa.xcb` plugin error | MIT-SHM incompatible in container | Set `QT_X11_NO_MITSHM=1` |

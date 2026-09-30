@@ -104,7 +104,7 @@ no formal test files exist yet. When adding tests:
 │  rviz2 ←── /tf tree                                                                         │
 └───────────────────────────────────────────────────────────────────────────────────────────────┘
          │                                                    │
-         │ CycloneDDS 0.10.2 (unicast, /dev/shm)             │ X11 forwarding
+         │ CycloneDDS 0.10.5 (unicast, /dev/shm)             │ X11 forwarding
          ▼                                                    ▼
    ┌─────────────┐                                    ┌──────────────┐
    │ Unitree G1   │                                    │ Host Display  │
@@ -149,7 +149,7 @@ no formal test files exist yet. When adding tests:
 |----------|---------------|-----|
 | `HOME` | `/workspace` | Prevents SIGSEGV from ROS log path resolution |
 | `ROS_LOG_DIR` | `/tmp` | Prevents permission crash writing to `//.ros/log` |
-| `RMW_IMPLEMENTATION` | `rmw_cyclonedds_cpp` | Unitree uses CycloneDDS 0.10.2 |
+| `RMW_IMPLEMENTATION` | `rmw_cyclonedds_cpp` | Unitree uses CycloneDDS 0.10.5 |
 | `CYCLONEDDS_URI` | `file:///workspace/config/cyclonedds.xml` | DDS peer discovery |
 | `LD_LIBRARY_PATH` | Must include `/opt/ros/humble/lib:/opt/cyclonedds/lib` | Runtime linking |
 
@@ -181,6 +181,7 @@ no formal test files exist yet. When adding tests:
 
 - **Linux host**: `--net=host` + `--ipc=host` + `/dev/shm` sharing for zero-copy DDS
 - **macOS host**: CycloneDDS unicast over VM bridge; optionally Zenoh TCP via `rmw_zenoh_cpp`
+  - **CRITICAL**: The UTM VM usually has two NICs (`enp0s1` for bridge, `enp0s2` for robot). `config/cyclonedds.xml` MUST list the robot interface (`enp0s2`) FIRST and the bridge interface (`enp0s1`) SECOND, otherwise local node discovery or robot communication will fail.
 - **Robot IPs**: `192.168.123.161` (primary), `192.168.123.164` (secondary)
 - **Multicast**: Disabled — unicast peer list in `config/cyclonedds.xml`
 
