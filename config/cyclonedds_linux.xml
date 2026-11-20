@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CycloneDDS xmlns="https://cdds.io/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
+    <Domain id="any">
+        <General>
+            <AllowMulticast>spdp</AllowMulticast>
+            <Interfaces>
+                <!-- Linux host interface names differ from the macOS/UTM setup.
+                     CycloneDDS uses the first available interface for local node
+                     discovery; list the host's active wired or wireless interface
+                     here before recreating the Linux container. -->
+                <NetworkInterface name="wlp0s20f3"/>
+            </Interfaces>
+        </General>
+        <Discovery>
+            <Peers>
+                <Peer address="129.12.114.191"/>
+                <Peer address="192.168.123.161"/>
+                <Peer address="192.168.123.164"/>
+            </Peers>
+        </Discovery>
+    </Domain>
+</CycloneDDS>

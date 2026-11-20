@@ -74,3 +74,4 @@ log/
 build/
 install/
 .env
+.rviz2/persistent_settings

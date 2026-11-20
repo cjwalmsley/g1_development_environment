@@ -43,9 +43,18 @@ g1_development_environment/           # Git Repository Root
 To run graphical user interfaces like **RViz2** or **Gazebo** from inside the container, you must prepare X11 forwarding on your host operating system.
 
 ### On Linux Host (Ubuntu 24.04)
-Run this command in your host terminal to permit the local container to access your X11 graphical display server:
+Create an Xauthority file for the container and permit local containers to access the display:
 ```bash
+xauth nlist "$DISPLAY" | sed -e 's/^..../ffff/' | xauth -f /tmp/.docker.xauth nmerge -
 xhost +local:docker
+```
+
+If `xauth nlist "$DISPLAY"` returns no cookie (for example on some Wayland sessions),
+restart the container after setting up X11 forwarding:
+
+```bash
+docker compose up -d --force-recreate g1-dev-linux
+docker exec g1_dev_linux sh -lc 'test -O /tmp/.docker.xauth && echo ready'
 ```
 
 ### On macOS Host (Apple Silicon M2)
@@ -86,6 +95,23 @@ xhost +local:docker
 
    # On macOS
    docker exec -it g1_dev_mac bash
+   ```
+
+   `docker exec` starts a new shell directly. If `ros2: command not found`
+   appears, source the workspace overlays manually:
+   ```bash
+   source /opt/ros/humble/setup.bash
+   source /opt/unitree_ws/install/setup.bash
+   source /opt/g1_ws/install/setup.bash
+   [ -f /workspace/install/setup.bash ] && source /workspace/install/setup.bash
+   ```
+
+   After rebuilding or changing the Dockerfile, recreate the service so the
+   container's `.bashrc` setup is installed:
+   ```bash
+   docker compose build g1-dev-linux
+   docker compose up -d --force-recreate g1-dev-linux
+   docker exec -it g1_dev_linux bash
    ```
 
 4. Build your `colcon` workspace (inside the container):

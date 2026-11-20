@@ -75,7 +75,7 @@ RUN git clone https://github.com/eclipse-cyclonedds/cyclonedds.git -b releases/0
 
 # Set CycloneDDS environment path
 ENV CYCLONEDDS_HOME=/opt/cyclonedds
-ENV LD_LIBRARY_PATH=/opt/cyclonedds/lib:${LD_LIBRARY_PATH:-}
+ENV LD_LIBRARY_PATH=/opt/cyclonedds/lib
 
 # 5. Install Unitree SDK 2 Python interface and pin NumPy to 1.x
 WORKDIR /opt/unitree_sdk

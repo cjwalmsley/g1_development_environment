@@ -24,7 +24,9 @@ fi
 
 # Export CycloneDDS variables globally so your terminal inherits them
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_URI=file:///workspace/config/cyclonedds.xml
+if [ -z "${CYCLONEDDS_URI:-}" ]; then
+    export CYCLONEDDS_URI=file:///workspace/config/cyclonedds.xml
+fi
 
 
 # Execute container main command

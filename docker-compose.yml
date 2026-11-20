@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
+      network: host
     image: g1-humble-dev:latest
     container_name: g1_dev_linux
     entrypoint: [ "/usr/local/bin/g1-entrypoint.sh" ]
@@ -12,10 +13,15 @@ services:
     ipc: host                                  # Shares the host's IPC namespace for Zero-Copy /dev/shm
     environment:
       - DISPLAY=${DISPLAY:-}                 # Graphical UI forwarding
+      - XAUTHORITY=/tmp/.docker.xauth
       - QT_X11_NO_MITSHM=1
+      - HOME=/workspace
+      - ROS_LOG_DIR=/tmp
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp  # Direct CycloneDDS integration for physical robot
+      - CYCLONEDDS_URI=file:///workspace/config/cyclonedds_linux.xml
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw       # Mounts X11 server sockets
+      - ${XAUTHORITY:-/tmp/.docker.xauth}:/tmp/.docker.xauth:ro
       - /dev/shm:/dev/shm:rw                   # Zero-copy memory map
       - .:/workspace                           # Mounts workspace directory
     command: [ "/bin/bash" ]
