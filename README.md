@@ -24,12 +24,14 @@ g1_development_environment/           # Git Repository Root
 │   ├── runConfigurations/      # Shared CLion & PyCharm execution variables
 │   └── cmake.xml               # Shared CMake Profiles and Toolchain links
 ├── config/
-│   └── cyclonedds.xml          # DDS network configurations for physical robot
+│   ├── cyclonedds.xml          # DDS network config for macOS/UTM VM
+│   └── cyclonedds_linux.xml    # DDS network config for Linux host Ethernet
 ├── src/                        # Custom ROS 2 Packages (colcon workspace source space)
 │   ├── g1_control_nodes/       # Low-level C++ control & manipulation nodes
 │   ├── g1_cognitive_nodes/     # High-level Python cognitive & behavior tree nodes
 │   └── test_imports.py         # Quick smoke-test for rclpy + unitree_sdk2py
 ├── docker-compose.yml          # Container configuration for Linux & macOS
+├── .bashrc                     # ROS 2 overlays & CycloneDDS env for docker exec shells
 ├── .env / .env.example         # DISPLAY forwarding variables
 ├── AGENTS.md                   # Canonical AI coding agent reference
 ├── GEMINI.md                   # Gemini context file
@@ -70,7 +72,56 @@ docker exec g1_dev_linux sh -lc 'test -O /tmp/.docker.xauth && echo ready'
 
 ---
 
-## 🐳 3. Quick Start: Launching the Container
+## 🔌 3. Linux PC Setup: Ethernet, Container Rebuild & Running the Visualiser
+
+1. **Configure Linux PC Ethernet network settings (static IP on `192.168.123.x`)**
+   * Check your Ethernet interface name with `ip -br link` and `nmcli device status` — this setup uses the USB Gigabit Ethernet adapter `enx6c6e072266fc` (profile `"Wired connection 2"`), or `eno1` for built-in Ethernet.
+   * The G1 does not run a DHCP server on `192.168.123.x`. Assign static IP `192.168.123.222/24` with a blank gateway and `ipv4.never-default yes` so Wi-Fi keeps internet access:
+     ```bash
+     nmcli connection modify "Wired connection 2" \
+       ipv4.method manual \
+       ipv4.addresses 192.168.123.222/24 \
+       ipv4.gateway "" \
+       ipv4.dns "" \
+       ipv4.never-default yes
+
+     nmcli connection up "Wired connection 2"
+     ```
+     *(GUI alternative: **Settings** ➔ **Network** ➔ **Wired** ➔ **IPv4** ➔ **Manual**, Address `192.168.123.222`, Netmask `255.255.255.0`, Gateway blank, and check **"Use this connection only for resources on its network"**.)*
+   * Verify host reachability:
+     ```bash
+     ip -br addr show enx6c6e072266fc    # Should show 192.168.123.222/24
+     ping -c 3 192.168.123.161          # G1 primary computer
+     ping -c 3 192.168.123.164          # G1 secondary computer
+     ```
+
+2. **Confirm CycloneDDS Linux config (`config/cyclonedds_linux.xml`)**
+   * Ensure `<NetworkInterface name="enx6c6e072266fc"/>` and `<Peers>` (`192.168.123.222`, `192.168.123.161`, `192.168.123.164`) are set. `g1-dev-linux` uses `network_mode: host` and `CYCLONEDDS_URI=file:///workspace/config/cyclonedds_linux.xml`, so Docker sees Ethernet traffic directly with no port forwarding.
+
+3. **Enable X11 forwarding & rebuild the container** *(required after `.devcontainer/Dockerfile` or `.devcontainer/entrypoint.sh` updates)*
+   ```bash
+   xauth nlist "$DISPLAY" | sed -e 's/^..../ffff/' | xauth -f /tmp/.docker.xauth nmerge -
+   xhost +local:docker
+   docker compose build g1-dev-linux
+   ```
+
+4. **Restart (recreate) the container and enter it**
+   ```bash
+   docker compose up -d --force-recreate g1-dev-linux
+   docker exec -it g1_dev_linux bash
+   ```
+
+5. **Verify `/lowstate` and run the visualiser** *(inside the container)*
+   ```bash
+   ros2 daemon stop
+   ros2 topic info /lowstate     # Publisher count should be >= 1
+   ros2 launch g1_cognitive_nodes g1_sim_visualisation.launch.py
+   ```
+   *(If you modified local packages in `/workspace/src` and have not built them yet, run `cd /workspace && colcon build --symlink-install && source install/setup.bash` before launching.)*
+
+---
+
+## 🐳 4. Quick Start: Launching the Container
 
 1. Clone your repository onto the host machine and move into the project directory:
    ```bash
@@ -123,7 +174,7 @@ docker exec g1_dev_linux sh -lc 'test -O /tmp/.docker.xauth && echo ready'
 
 ---
 
-## 💻 4. JetBrains IDE Configurations
+## 💻 5. JetBrains IDE Configurations
 
 ### A. CLion Setup (C++ Control Nodes)
 Rather than compiling on your host machine, CLion runs all compilations and debugging natively inside your Docker container.
@@ -162,7 +213,7 @@ Rather than compiling on your host machine, CLion runs all compilations and debu
 
 ---
 
-## 🏃‍♂️ 5. Running and Debugging Nodes in the IDE
+## 🏃‍♂️ 6. Running and Debugging Nodes in the IDE
 
 ### Shared Run Configurations (Shared via Git)
 To run your nodes from the play button in CLion or PyCharm, ensure that **"Store as project file"** or **"Share through VCS"** is checked in your **Run/Debug Configurations** editor. This saves configurations to `.idea/runConfigurations/`.
@@ -179,11 +230,11 @@ ROS_LOG_DIR=/tmp
 
 ---
 
-## 📡 6. Network Topology: Shared Memory & DDS Bridging
+## 📡 7. Network Topology: Shared Memory & DDS Bridging
 
 ### Physical Hardware Control (Linux Host)
-On your Linux PCs, the container is spawned with `--net=host` and maps `-v /dev/shm:/dev/shm`.
-* **DDS Discovery:** This shares the physical host interfaces directly. Your container can dynamically discover and handshake with the Unitree G1 robot over Wi-Fi or local Ethernet.
+On your Linux PCs, the container is spawned with `--net=host` (`network_mode: host`), `privileged: true`, and maps `-v /dev/shm:/dev/shm`, using `CYCLONEDDS_URI=file:///workspace/config/cyclonedds_linux.xml`.
+* **DDS Discovery:** Binds directly to the host's USB Ethernet interface `enx6c6e072266fc` (`192.168.123.222/24`) and discovers the G1 robot peers at `192.168.123.161` and `192.168.123.164`.
 * **Zero-Copy IPC:** High-bandwidth data streams bypass the IP network stack entirely via shared memory, minimizing CPU overhead and communication latency.
 
 ### Virtual Remote Monitoring (MacBook M2 Host)

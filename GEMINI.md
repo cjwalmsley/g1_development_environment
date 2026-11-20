@@ -24,6 +24,10 @@ The three pillars of the project are:
 All builds happen **inside the Docker container**, not on the host.
 
 ```bash
+# Rebuild / recreate the container after Dockerfile or .devcontainer/entrypoint.sh edits
+docker compose build g1-dev-linux
+docker compose up -d --force-recreate g1-dev-linux
+
 # Start the container
 docker compose up -d g1-dev-linux        # Linux host
 docker compose up -d g1-dev-mac          # macOS host
@@ -150,7 +154,7 @@ no formal test files exist yet. When adding tests:
 | `HOME` | `/workspace` | Prevents SIGSEGV from ROS log path resolution |
 | `ROS_LOG_DIR` | `/tmp` | Prevents permission crash writing to `//.ros/log` |
 | `RMW_IMPLEMENTATION` | `rmw_cyclonedds_cpp` | Unitree uses CycloneDDS 0.10.5 |
-| `CYCLONEDDS_URI` | `file:///workspace/config/cyclonedds.xml` | DDS peer discovery |
+| `CYCLONEDDS_URI` | `file:///workspace/config/cyclonedds_linux.xml` (Linux) or `file:///workspace/config/cyclonedds.xml` (macOS/UTM) | DDS peer discovery |
 | `LD_LIBRARY_PATH` | Must include `/opt/ros/humble/lib:/opt/cyclonedds/lib` | Runtime linking |
 
 ---
@@ -170,20 +174,20 @@ no formal test files exist yet. When adding tests:
 
 | Service | Use Case | Command |
 |---------|----------|---------|
-| `g1-dev-linux` | Interactive dev (x86_64 Linux) | `docker compose up -d g1-dev-linux` |
-| `g1-dev-mac` | Interactive dev (arm64 macOS) | `docker compose up -d g1-dev-mac` |
+| `g1-dev-linux` | Interactive dev (x86_64 Linux, `config/cyclonedds_linux.xml`) | `docker compose up -d g1-dev-linux` |
+| `g1-dev-mac` | Interactive dev (arm64 macOS, `config/cyclonedds.xml`) | `docker compose up -d g1-dev-mac` |
 | `g1_simulator` | Mock publisher for testing | Auto-runs `g1_mock_publisher.py` |
-| `g1_telemetry_listener` | Headless vis pipeline | Auto-runs launch file |
+| `g1_telemetry_listener` | Headless vis pipeline (`config/cyclonedds.xml`) | Auto-runs launch file |
 
 ---
 
 ## Networking
 
-- **Linux host**: `--net=host` + `--ipc=host` + `/dev/shm` sharing for zero-copy DDS
+- **Linux host**: `network_mode: host` (`--net=host`) + `ipc: host` + `privileged: true` + `/dev/shm` sharing for zero-copy DDS. Configure the USB Ethernet adapter `enx6c6e072266fc` (`"Wired connection 2"`) with static IPv4 `192.168.123.222/24`, blank gateway, and `ipv4.never-default yes` (G1 has no DHCP server). Uses `config/cyclonedds_linux.xml` (`<NetworkInterface name="enx6c6e072266fc"/>` and `<Peers>` `192.168.123.222`, `192.168.123.161`, `192.168.123.164`).
 - **macOS host**: CycloneDDS unicast over VM bridge; optionally Zenoh TCP via `rmw_zenoh_cpp`
   - **CRITICAL**: The UTM VM usually has two NICs (`enp0s1` for bridge, `enp0s2` for robot). `config/cyclonedds.xml` MUST list the robot interface (`enp0s2`) FIRST and the bridge interface (`enp0s1`) SECOND, otherwise local node discovery or robot communication will fail.
 - **Robot IPs**: `192.168.123.161` (primary), `192.168.123.164` (secondary)
-- **Multicast**: Disabled — unicast peer list in `config/cyclonedds.xml`
+- **Multicast**: SPDP only (`<AllowMulticast>spdp</AllowMulticast>`) with explicit unicast peer list in `config/cyclonedds_linux.xml` (Linux) and `config/cyclonedds.xml` (macOS/UTM)
 
 ---
 

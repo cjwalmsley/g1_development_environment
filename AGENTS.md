@@ -61,7 +61,8 @@ g1_development_environment/
 │       ├── g1_control_node.xml
 │       └── g1_telemetry_listener.xml
 ├── config/
-│   └── cyclonedds.xml          # DDS network interface binding + peer discovery
+│   ├── cyclonedds.xml          # DDS network interface binding + peer discovery (macOS/UTM VM)
+│   └── cyclonedds_linux.xml    # DDS network interface binding + peer discovery (Linux host Ethernet)
 ├── src/                        # ← colcon workspace source space
 │   ├── g1_cognitive_nodes/     # Python package (ament_python)
 │   │   ├── g1_cognitive_nodes/
@@ -80,6 +81,7 @@ g1_development_environment/
 │   │   └── package.xml
 │   └── test_imports.py         # Quick smoke-test for rclpy + unitree_sdk2py
 ├── docker-compose.yml          # Service definitions: g1-dev-linux, g1-dev-mac, g1_simulator, g1_telemetry_listener
+├── .bashrc                     # ROS 2 overlays & CYCLONEDDS_URI for docker exec shells (HOME=/workspace)
 ├── .env / .env.example         # DISPLAY forwarding variables
 ├── .gitignore
 ├── LICENSE                     # GPL v3
@@ -142,7 +144,15 @@ colcon build --symlink-install
 ### Start container (Linux host)
 
 ```bash
-xhost +local:docker                   # Allow X11 forwarding
+# Allow X11 forwarding
+xauth nlist "$DISPLAY" | sed -e 's/^..../ffff/' | xauth -f /tmp/.docker.xauth nmerge -
+xhost +local:docker
+
+# Optional: rebuild & recreate after Dockerfile or .devcontainer/entrypoint.sh changes
+docker compose build g1-dev-linux
+docker compose up -d --force-recreate g1-dev-linux
+
+# Start (if not already up) and enter the container
 docker compose up -d g1-dev-linux
 docker exec -it g1_dev_linux bash
 ```
@@ -223,10 +233,10 @@ Currently a scaffold node — intended for low-level joint-command publishing.
 
 | Service                  | Purpose                            | Network        | Notes                           |
 |--------------------------|------------------------------------|-----------------|---------------------------------|
-| `g1-dev-linux`           | Interactive dev shell (x86_64)     | `host`          | Privileged, IPC host, X11       |
-| `g1-dev-mac`             | Interactive dev shell (arm64)      | `host`          | 512 MB shm, GPU passthrough     |
+| `g1-dev-linux`           | Interactive dev shell (x86_64)     | `host`          | Privileged, IPC host, X11, `cyclonedds_linux.xml` |
+| `g1-dev-mac`             | Interactive dev shell (arm64)      | `host`          | 512 MB shm, GPU passthrough, `cyclonedds.xml` |
 | `g1_simulator`           | Mock joint-state publisher         | `g1_sim_net`    | Runs `g1_mock_publisher.py`     |
-| `g1_telemetry_listener`  | Headless visualisation pipeline    | `host`          | Runs launch file                |
+| `g1_telemetry_listener`  | Headless visualisation pipeline    | `host`          | Runs launch file (`cyclonedds.xml`) |
 
 ---
 
@@ -237,7 +247,7 @@ These must be set for ROS 2 nodes to function correctly:
 | Variable              | Value                                        | Purpose                                     |
 |-----------------------|----------------------------------------------|---------------------------------------------|
 | `RMW_IMPLEMENTATION`  | `rmw_cyclonedds_cpp`                         | DDS middleware selection                    |
-| `CYCLONEDDS_URI`      | `file:///workspace/config/cyclonedds.xml`    | DDS peer discovery config                   |
+| `CYCLONEDDS_URI`      | `file:///workspace/config/cyclonedds_linux.xml` (Linux) or `file:///workspace/config/cyclonedds.xml` (macOS/UTM) | DDS peer discovery config                   |
 | `LD_LIBRARY_PATH`     | `/opt/ros/humble/lib:/opt/cyclonedds/lib`    | Runtime library resolution                  |
 | `HOME`                | `/workspace`                                 | **Critical** — prevents ROS log SIGSEGV     |
 | `ROS_LOG_DIR`         | `/tmp`                                       | **Critical** — prevents permission crash    |
@@ -246,6 +256,9 @@ These must be set for ROS 2 nodes to function correctly:
 
 > **⚠️ `HOME` and `ROS_LOG_DIR` are critical.** Without them, `rclpy`/`rclcpp`
 > nodes crash with SIGSEGV (exit 139) trying to write to `//.ros/log`.
+> `.devcontainer/entrypoint.sh` preserves a pre-set `CYCLONEDDS_URI` (such as
+> `cyclonedds_linux.xml` from `docker-compose.yml`) and only falls back to
+> `cyclonedds.xml` when `CYCLONEDDS_URI` is unset.
 
 ---
 
@@ -327,23 +340,23 @@ colcon test-result --verbose
 
 ### Physical robot connection (Linux host)
 
-- Container runs with `--net=host` and `--ipc=host`
+- Container runs with `--net=host`, `--ipc=host`, `privileged: true`, and `CYCLONEDDS_URI=file:///workspace/config/cyclonedds_linux.xml`
 - Shares `/dev/shm` for zero-copy IPC
-- CycloneDDS configured with unicast peer discovery (multicast limited to SPDP)
-- Robot addresses: `192.168.123.161` (main), `192.168.123.164` (secondary)
+- **Host static IP (no DHCP on G1 subnet):** Configure the Ethernet NIC (`enx6c6e072266fc` USB Gigabit Ethernet adapter; profile `"Wired connection 2"`) with static IPv4 `192.168.123.222/24`, empty gateway, and `ipv4.never-default yes` so Wi-Fi retains internet access
+- **CycloneDDS (`config/cyclonedds_linux.xml`):** Sets `<AllowMulticast>spdp</AllowMulticast>`, `<NetworkInterface name="enx6c6e072266fc"/>`, and `<Peers>` `192.168.123.222` (Linux host), `192.168.123.161` (G1 primary), and `192.168.123.164` (G1 secondary)
 
 ### macOS bridging (Apple Silicon via UTM)
 
-- Uses `rmw_cyclonedds_cpp` with CycloneDDS unicast over the VM network
+- Uses `rmw_cyclonedds_cpp` with CycloneDDS unicast over the VM network (`config/cyclonedds.xml`)
 - The UTM VM typically exposes **two NICs** to the container:
   - `enp0s1` — VM bridge network (e.g. `192.168.64.x`), used for host ↔ VM traffic
   - `enp0s2` — Robot ethernet subnet (e.g. `192.168.123.x`), passthrough to the G1
 - Alternative: swap to `rmw_zenoh_cpp` for TCP-based bridging via Zenoh router on port `7447`
 - GPU passthrough via `/dev/dri`
 
-### CycloneDDS interface ordering (critical)
+### CycloneDDS interface ordering (critical — macOS/UTM multi-NIC `config/cyclonedds.xml`)
 
-> **⚠️ Interface order in `cyclonedds.xml` is critical when the host has
+> **⚠️ Interface order in `config/cyclonedds.xml` is critical when the host has
 > multiple NICs.** CycloneDDS 0.10.x uses the **first listed interface** as the
 > primary data transport channel. Incorrect ordering causes either robot
 > discovery failure or broken inter-node communication.
@@ -381,12 +394,15 @@ discovery) and the robot addresses:
 
 ### Adding a new peer
 
-Edit `config/cyclonedds.xml` and add a `<Peer address="..."/>` entry inside `<Peers>`.
+Edit `config/cyclonedds_linux.xml` (Linux) or `config/cyclonedds.xml` (macOS/UTM), add a `<Peer address="..."/>` entry inside `<Peers>`, and restart the ROS 2 daemon (`ros2 daemon stop`) inside the container.
 
 ### Verifying DDS connectivity
 
 ```bash
-# Inside the container — check robot data is flowing:
+# Inside the container — reload CycloneDDS config after XML edits:
+ros2 daemon stop
+
+# Check robot data is flowing:
 ros2 topic hz /lowstate          # Should show ~1000 Hz from robot
 ros2 topic hz /joint_states      # Should match /lowstate rate
 ros2 topic hz /tf                # Should match /joint_states rate
@@ -397,7 +413,8 @@ ros2 topic info /lowstate        # Publisher count should be > 0
 
 # Check network interfaces:
 ip link                          # Lists available NICs
-ip addr show enp0s2              # Verify robot subnet IP
+ip addr show enx6c6e072266fc     # Verify Linux USB Ethernet IP (192.168.123.222/24)
+ip addr show enp0s2              # Verify macOS/UTM robot subnet IP
 ```
 
 ---
@@ -422,7 +439,9 @@ The entrypoint sources workspaces in this order (later overlays override earlier
 | SIGSEGV exit 139 on node start | `HOME` or `ROS_LOG_DIR` not set | Set `HOME=/workspace` and `ROS_LOG_DIR=/tmp` |
 | "No module named unitree_hg" | Unitree underlay not sourced | `source /opt/unitree_ws/install/setup.bash` |
 | RViz2 blank / X11 error | X11 forwarding not configured | Run `xhost +local:docker` on host |
-| CycloneDDS can't find robot | Wrong IP or interface order in `cyclonedds.xml` | Update `<NetworkInterface>` and `<Peer>` addresses. Ensure robot NIC is listed first. |
+| CycloneDDS can't find robot | Wrong IP or interface order in `cyclonedds_linux.xml` / `cyclonedds.xml` | Update `<NetworkInterface>` (`enx6c6e072266fc` on Linux, `enp0s2` first on macOS/UTM) and `<Peer>` addresses, then run `ros2 daemon stop`. |
+| `enp0s2: does not match an available interface` on Linux | Stale container image whose baked-in `/usr/local/bin/g1-entrypoint.sh` overwrote `CYCLONEDDS_URI` with `cyclonedds.xml` | Rebuild and recreate: `docker compose build g1-dev-linux && docker compose up -d --force-recreate g1-dev-linux` |
+| Linux Ethernet stuck in `connecting (getting IP configuration)` | G1 does not run a DHCP server on `192.168.123.x` | Assign static IPv4 `192.168.123.222/24` with blank gateway and `ipv4.never-default yes` on `enx6c6e072266fc` (`"Wired connection 2"`). |
 | RViz shows "No transform" for revolute joints | `cyclonedds.xml` missing VM bridge interface | Add VM bridge NIC (e.g. `enp0s1`) as a secondary `<NetworkInterface>` to enable local node discovery. |
 | colcon build fails with missing deps | Underlays not sourced before build | Source entrypoint or run `source /opt/ros/humble/setup.bash && source /opt/unitree_ws/install/setup.bash` first |
 | NumPy 2.x breaks Unitree SDK | Default pip installs NumPy 2.x | Ensure `numpy<2` is pinned |

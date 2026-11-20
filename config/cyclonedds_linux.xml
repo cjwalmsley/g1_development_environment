@@ -5,16 +5,15 @@
         <General>
             <AllowMulticast>spdp</AllowMulticast>
             <Interfaces>
-                <!-- Linux host interface names differ from the macOS/UTM setup.
-                     CycloneDDS uses the first available interface for local node
-                     discovery; list the host's active wired or wireless interface
-                     here before recreating the Linux container. -->
-                <NetworkInterface name="wlp0s20f3"/>
+                <!-- USB Gigabit Ethernet adapter on the Unitree G1 subnet (192.168.123.x) -->
+                <NetworkInterface name="enx6c6e072266fc"/>
             </Interfaces>
         </General>
         <Discovery>
             <Peers>
-                <Peer address="129.12.114.191"/>
+                <!-- This Linux host's static IP on the G1 subnet (for local node discovery) -->
+                <Peer address="192.168.123.222"/>
+                <!-- Unitree G1 robot addresses -->
                 <Peer address="192.168.123.161"/>
                 <Peer address="192.168.123.164"/>
             </Peers>
