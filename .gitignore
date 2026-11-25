@@ -56,12 +56,8 @@ workspace/install/
 workspace/log/
 
 # JetBrains IDEs local user configurations
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/editor.xml
-.idea/usage.statistics.xml
-.idea/dictionaries/
-.idea/shelf/
+.idea/
+
 cmake-build-*/
 
 # Log files and system artifacts
