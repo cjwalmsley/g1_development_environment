@@ -16,6 +16,7 @@ services:
       - XAUTHORITY=/tmp/.docker.xauth
       - QT_X11_NO_MITSHM=1
       - HOME=/workspace
+      - HISTFILE=/tmp/.bash_history
       - ROS_LOG_DIR=/tmp
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp  # Direct CycloneDDS integration for physical robot
       - CYCLONEDDS_URI=file:///workspace/config/cyclonedds_linux.xml
