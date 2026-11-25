@@ -11,6 +11,11 @@ if [ -f "/opt/unitree_ws/install/setup.bash" ]; then
     source /opt/unitree_ws/install/setup.bash
 fi
 
+# Source the Livox LiDAR driver underlay
+if [ -f "/opt/livox_ws/install/setup.bash" ]; then
+    source /opt/livox_ws/install/setup.bash
+fi
+
 # Source the application workspace baked into the image.
 if [ -f "/opt/g1_ws/install/setup.bash" ]; then
     source /opt/g1_ws/install/setup.bash

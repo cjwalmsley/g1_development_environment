@@ -5,9 +5,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
-COPY .devcontainer/entrypoint.sh /usr/local/bin/g1-entrypoint.sh
-RUN chmod +x /usr/local/bin/g1-entrypoint.sh
-
 # 1. Install system utilities, X11 libraries, and development tools
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -126,13 +123,40 @@ RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
 WORKDIR /opt/unitree_ws
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
+# 6b. Build and install Livox-SDK2 (required by livox_ros_driver2 for Mid-360 LiDAR)
+WORKDIR /opt/livox_sdk2
+RUN git clone https://github.com/Livox-SDK/Livox-SDK2.git . && \
+    mkdir -p build && cd build && \
+    cmake .. && \
+    make -j"$(nproc)" && \
+    make install && \
+    ldconfig
+
+ENV LD_LIBRARY_PATH=/opt/cyclonedds/lib:/usr/local/lib
+
+# 6c. Build livox_ros_driver2 underlay for ROS 2 Humble
+WORKDIR /opt/livox_ws
+RUN mkdir -p /opt/livox_ws/src && \
+    git clone https://github.com/Livox-SDK/livox_ros_driver2.git /opt/livox_ws/src/livox_ros_driver2 && \
+    /bin/bash -e -c "source /opt/ros/humble/setup.bash && \
+    cd /opt/livox_ws/src/livox_ros_driver2 && \
+    cp -f package_ROS2.xml package.xml && \
+    cp -rf launch_ROS2/ launch/ && \
+    cd /opt/livox_ws && \
+    colcon build --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=humble -DCMAKE_BUILD_TYPE=Release && \
+    rm -rf /opt/livox_ws/src/livox_ros_driver2/launch"
+
 # Build the application workspace into the image so the packages are available
 # even when the runtime container only mounts selected workspace directories.
 WORKDIR /opt/g1_ws
 COPY src /opt/g1_ws/src
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
     source /opt/unitree_ws/install/setup.bash && \
+    source /opt/livox_ws/install/setup.bash && \
     colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+
+# Bake the repository's G1 Mid-360 config into the driver's default config path
+COPY config/MID360_config.json /opt/livox_ws/install/livox_ros_driver2/share/livox_ros_driver2/config/MID360_config.json
 
 # 7. Persistent path injection for PyCharm Docker interpreter indexing
 RUN echo "/opt/ros/humble/lib/python3.10/site-packages" > /usr/local/lib/python3.10/dist-packages/ros_humble.pth
@@ -141,9 +165,11 @@ RUN echo "/opt/unitree_ws/install/unitree_go/local/lib/python3.10/dist-packages"
 # 8. Source the ROS 2 Humble setup by default
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
 RUN echo "source /opt/unitree_ws/install/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/livox_ws/install/setup.bash" >> ~/.bashrc
 RUN echo "source /opt/g1_ws/install/setup.bash" >> ~/.bashrc
 RUN echo '[ -f /workspace/install/setup.bash ] && source /workspace/install/setup.bash' >> ~/.bashrc
 
-
+COPY .devcontainer/entrypoint.sh /usr/local/bin/g1-entrypoint.sh
+RUN chmod +x /usr/local/bin/g1-entrypoint.sh
 
 WORKDIR /workspace
