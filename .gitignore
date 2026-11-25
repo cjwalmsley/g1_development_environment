@@ -71,3 +71,5 @@ build/
 install/
 .env
 .rviz2/persistent_settings
+/.config/ros.org/rqt_gui.ini
+docker/pc2-realsense/*.tar*

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CycloneDDS xmlns="https://cdds.io/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
+    <Domain id="any">
+        <General>
+            <AllowMulticast>spdp</AllowMulticast>
+            <Interfaces>
+                <!-- G1 PC2 Ethernet interface on the 192.168.123.x robot subnet -->
+                <NetworkInterface name="eth0"/>
+            </Interfaces>
+        </General>
+        <Discovery>
+            <Peers>
+                <!-- G1 PC2 self IP (for local node discovery) -->
+                <Peer address="192.168.123.164"/>
+                <!-- G1 PC1 primary computer -->
+                <Peer address="192.168.123.161"/>
+                <!-- Linux dev host -->
+                <Peer address="192.168.123.222"/>
+            </Peers>
+        </Discovery>
+    </Domain>
+</CycloneDDS>

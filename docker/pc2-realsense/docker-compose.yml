@@ -1,0 +1,21 @@
+services:
+  g1-pc2-realsense:
+    image: g1-pc2-realsense:arm64
+    container_name: g1_pc2_realsense
+    network_mode: host
+    ipc: host
+    privileged: true
+    restart: "no"
+    environment:
+      - HOME=/tmp
+      - ROS_LOG_DIR=/tmp
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///etc/cyclonedds/cyclonedds_pc2.xml
+      - REALSENSE_CAMERA_NAME=d435
+      - REALSENSE_CAMERA_NAMESPACE=camera
+      # Use 640x480x15 for lighter bandwidth/CPU if needed
+      - REALSENSE_COLOR_PROFILE=848x480x15
+      - REALSENSE_DEPTH_PROFILE=848x480x15
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+      - ./cyclonedds_pc2.xml:/etc/cyclonedds/cyclonedds_pc2.xml:ro
