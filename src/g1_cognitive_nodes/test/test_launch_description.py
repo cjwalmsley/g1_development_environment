@@ -47,18 +47,23 @@ class TestLaunchDescription:
         self._ld = mod.generate_launch_description()
 
     def _get_node_actions(self):
-        """Extract Node actions from the launch description."""
+        """Extract Node actions from the launch description (including timers)."""
+        from launch.actions import TimerAction
         from launch_ros.actions import Node as LaunchNode
 
-        return [
-            entity
-            for entity in self._ld.entities
-            if isinstance(entity, LaunchNode)
-        ]
+        nodes = []
+        for entity in self._ld.entities:
+            if isinstance(entity, LaunchNode):
+                nodes.append(entity)
+            elif isinstance(entity, TimerAction):
+                for sub_action in entity.actions:
+                    if isinstance(sub_action, LaunchNode):
+                        nodes.append(sub_action)
+        return nodes
 
-    def test_launch_description_returns_three_nodes(self):
+    def test_launch_description_returns_four_nodes(self):
         nodes = self._get_node_actions()
-        assert len(nodes) == 3, f"Expected 3 nodes, got {len(nodes)}"
+        assert len(nodes) == 4, f"Expected 4 nodes, got {len(nodes)}"
 
     def test_robot_state_publisher_present(self):
         nodes = self._get_node_actions()
@@ -79,6 +84,33 @@ class TestLaunchDescription:
             or getattr(n, "_package", None) == "g1_cognitive_nodes"
         ]
         assert len(listeners) == 1, "Expected exactly one g1_telemetry_listener node"
+
+    def test_livox_driver_present(self):
+        nodes = self._get_node_actions()
+        livox = [
+            n
+            for n in nodes
+            if getattr(n, "_Node__package", None) == "livox_ros_driver2"
+            or getattr(n, "_package", None) == "livox_ros_driver2"
+        ]
+        assert len(livox) == 1, "Expected exactly one livox_ros_driver2 node"
+
+        def _unwrap(val):
+            if isinstance(val, tuple):
+                text = "".join(getattr(part, "text", str(part)) for part in val)
+                return text.removesuffix("\n...\n")
+            return val
+
+        raw_params = getattr(livox[0], "_Node__parameters", None) or []
+        merged_params = {
+            _unwrap(k): _unwrap(v)
+            for entry in raw_params
+            if isinstance(entry, dict)
+            for k, v in entry.items()
+        }
+
+        assert merged_params.get("xfer_format") == 0
+        assert merged_params.get("frame_id") == "mid360_link"
 
     def test_rviz2_present(self):
         nodes = self._get_node_actions()
