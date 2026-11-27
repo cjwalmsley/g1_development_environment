@@ -27,11 +27,10 @@ if [ -f "/workspace/install/setup.bash" ]; then
     source /workspace/install/setup.bash
 fi
 
-# Export CycloneDDS variables globally so your terminal inherits them
+# Export CycloneDDS RMW globally so shells inherit it.
+# CYCLONEDDS_URI is provided by docker-compose.yml for Linux robot networking
+# and intentionally left unset for headless/local containers.
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-if [ -z "${CYCLONEDDS_URI:-}" ]; then
-    export CYCLONEDDS_URI=file:///workspace/config/cyclonedds.xml
-fi
 
 
 # Execute container main command

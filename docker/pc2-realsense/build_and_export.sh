@@ -18,9 +18,13 @@ elif [ "$#" -gt 0 ]; then
     exit 1
 fi
 
-if [ ! -e /proc/sys/fs/binfmt_misc/qemu-aarch64 ]; then
-    echo "Registering QEMU arm64 binfmt handler..."
-    docker run --privileged --rm tonistiigi/binfmt --install arm64
+HOST_OS="$(uname -s)"
+HOST_ARCH="$(uname -m)"
+if [ "${HOST_OS}" = "Linux" ] && [ "${HOST_ARCH}" != "aarch64" ] && [ "${HOST_ARCH}" != "arm64" ]; then
+    if [ ! -e /proc/sys/fs/binfmt_misc/qemu-aarch64 ]; then
+        echo "Registering QEMU arm64 binfmt handler..."
+        docker run --privileged --rm tonistiigi/binfmt --install arm64
+    fi
 fi
 
 echo "Building ${IMAGE_TAG} for linux/arm64..."

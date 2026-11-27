@@ -60,13 +60,13 @@ class TestEnvironmentConfig:
     """
 
     def test_cyclonedds_config_exists(self):
-        config_path = "/workspace/config/cyclonedds.xml"
+        config_path = "/workspace/config/cyclonedds_linux.xml"
         if not os.path.isfile(config_path):
             # Fall back to workspace-relative path for non-container environments
             repo_config = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
                 "config",
-                "cyclonedds.xml",
+                "cyclonedds_linux.xml",
             )
             # Skip if neither path exists (e.g. running on host without workspace)
             if not os.path.isfile(repo_config):

@@ -43,7 +43,7 @@ RUN if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then \
         rosdep init; \
     fi && rosdep update
 
-# 3. Install ROS 2 Humble packages (GUI tools, DDS, MoveIt, Zenoh)
+# 3. Install ROS 2 Humble packages (GUI tools, DDS, MoveIt)
 RUN apt-get update && apt-get install -y \
     ros-humble-desktop \
     ros-humble-rviz2 \
@@ -55,7 +55,6 @@ RUN apt-get update && apt-get install -y \
     ros-humble-joint-state-publisher-gui \
     ros-humble-robot-state-publisher \
     ros-humble-rmw-cyclonedds-cpp \
-    ros-humble-rmw-zenoh-cpp \
     ros-humble-moveit \
     ros-humble-ros2-control \
     ros-humble-ros2-controllers \
@@ -63,7 +62,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 
-# 4. Compile CycloneDDS 0.10.2 from source (Unitree Pinned Dependency)
+# 4. Compile CycloneDDS 0.10.x from source (Unitree-compatible DDS)
 WORKDIR /opt/cyclonedds_source
 RUN git clone https://github.com/eclipse-cyclonedds/cyclonedds.git -b releases/0.10.x && \
     mkdir -p cyclonedds/build && cd cyclonedds/build && \
@@ -158,7 +157,7 @@ RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
 # Bake the repository's G1 Mid-360 config into the driver's default config path
 COPY config/MID360_config.json /opt/livox_ws/install/livox_ros_driver2/share/livox_ros_driver2/config/MID360_config.json
 
-# 7. Persistent path injection for PyCharm Docker interpreter indexing
+# 7. Persistent path injection for Python IDE/tooling indexing
 RUN echo "/opt/ros/humble/lib/python3.10/site-packages" > /usr/local/lib/python3.10/dist-packages/ros_humble.pth
 RUN echo "/opt/unitree_ws/install/unitree_go/local/lib/python3.10/dist-packages" >> /usr/local/lib/python3.10/dist-packages/ros_humble.pth
 

@@ -6,10 +6,19 @@
 
 ## What This Project Is
 
-A **containerised ROS 2 Humble workspace** for the **Unitree G1 edu+** humanoid
-robot (29-DOF body + 14-DOF Dex3-1 hands). The environment runs inside Docker
-on **Ubuntu 22.04 LTS** containers, hosted on either **x86_64 Linux** PCs or
-**arm64 Apple Silicon** Macs (via UTM or Docker Desktop).
+A **containerised ROS 2 Humble workspace** (Ubuntu 22.04 LTS) for the
+**Unitree G1 edu+** humanoid robot (29-DOF body + 14-DOF Dex3-1 hands).
+
+- **Full dev & robot runtime (X11/RViz2 GUI, direct Ethernet hardware access,
+  CycloneDDS telemetry):** **Linux hosts only** (`x86_64` or `arm64`).
+- **Multi-arch `linux/arm64` Docker images:** First-class support for both
+  `g1-humble-dev` and onboard images (`docker/pc2-realsense/`) on `linux/amd64`
+  and `linux/arm64` (including ARM64 Linux targets like Unitree G1 PC2).
+- **macOS (Apple Silicon):** Running the interactive dev environment (XQuartz,
+  UTM VM bridging, robot DDS) is **not supported**. macOS is supported only for
+  code editing, building/rebuilding Docker images (native `linux/arm64` and
+  `buildx` `linux/amd64`), and running headless non-robot builds/tests via
+  `g1-dev-headless`.
 
 The three pillars of the project are:
 
@@ -21,19 +30,26 @@ The three pillars of the project are:
 
 ## How To Build
 
-All builds happen **inside the Docker container**, not on the host.
+All builds happen **inside Docker**, not on the host.
 
 ```bash
-# Rebuild / recreate the container after Dockerfile or .devcontainer/entrypoint.sh edits
+# Rebuild / recreate the Linux interactive container after Dockerfile or entrypoint.sh edits
 docker compose build g1-dev-linux
 docker compose up -d --force-recreate g1-dev-linux
 
-# Start the container
-docker compose up -d g1-dev-linux        # Linux host
-docker compose up -d g1-dev-mac          # macOS host
-docker exec -it g1_dev_linux bash        # Enter the container
+# Start containers
+docker compose up -d g1-dev-linux        # Linux interactive host (GUI + robot DDS)
+docker compose up -d g1-dev-headless     # Headless build & test (Linux or macOS)
+docker exec -it g1_dev_linux bash        # Enter Linux interactive container
+docker exec -it g1_dev_headless bash     # Enter headless container
 
-# Build the colcon workspace
+# Build a linux/arm64 dev image explicitly (native on ARM64 / Apple Silicon, QEMU binfmt on x86_64 Linux)
+docker buildx build --platform linux/arm64 --load -t g1-humble-dev:arm64 -f .devcontainer/Dockerfile .
+
+# Build the linux/arm64 RealSense D435i image for G1 PC2
+./docker/pc2-realsense/build_and_export.sh
+
+# Build the colcon workspace (inside container)
 cd /workspace
 colcon build --symlink-install
 source install/setup.bash
@@ -70,32 +86,31 @@ python3 /workspace/src/test_imports.py
 ## How To Test
 
 ```bash
-# Colcon-integrated tests (when test suites are added)
+# Colcon-integrated tests (Python pytest + lint + C++ GTest)
 colcon test
 colcon test-result --verbose
 
-# Python tests with pytest
-cd /workspace/src/g1_cognitive_nodes && python3 -m pytest
+# Python tests directly with pytest (pytest binary is not on PATH)
+python3 -m pytest /workspace/src/g1_cognitive_nodes/test/ -v
 
 # Import verification
 python3 /workspace/src/test_imports.py
 ```
 
-Testing infrastructure is minimal — `pytest` is declared as a dependency but
-no formal test files exist yet. When adding tests:
-
-- Python: create `test/test_*.py` in the package directory
-- C++: use `ament_cmake_gtest`, add `ament_add_gtest()` to CMakeLists.txt
+Existing test suites:
+- Python (`src/g1_cognitive_nodes/test/`): `test_environment.py`, `test_joint_configuration.py`, `test_telemetry_listener.py`, `test_telemetry_integration.py`, `test_launch_description.py`, `test_flake8.py`, `test_pep257.py`
+- C++ (`src/g1_control_nodes/test/`): `test_g1_control_node.cpp` (GTest) + `ament_lint_auto`
 
 ---
 
 ## Architecture Overview
 
 ```
-┌─────────────────────── Docker Container (Ubuntu 22.04 + ROS 2 Humble) ───────────────────────┐
+┌────────────────── Docker Container (Ubuntu 22.04 + ROS 2 Humble, amd64 / arm64) ──────────────┐
 │                                                                                               │
 │  Underlay 1: /opt/ros/humble          (ROS 2 base + desktop + MoveIt + ros2_control)         │
 │  Underlay 2: /opt/unitree_ws          (unitree_go, unitree_api, unitree_hg, g1_description)  │
+│  Underlay 3: /opt/livox_ws            (Livox-SDK2 + livox_ros_driver2 for Mid-360 LiDAR)     │
 │  Pre-built:  /opt/g1_ws               (application packages baked into image)                │
 │  Overlay:    /workspace               (live development — mounted from host)                 │
 │                                                                                               │
@@ -108,10 +123,10 @@ no formal test files exist yet. When adding tests:
 │  rviz2 ←── /tf tree                                                                         │
 └───────────────────────────────────────────────────────────────────────────────────────────────┘
          │                                                    │
-         │ CycloneDDS 0.10.5 (unicast, /dev/shm)             │ X11 forwarding
+         │ CycloneDDS 0.10.x (Linux host Ethernet, /dev/shm)  │ X11 forwarding (Linux host)
          ▼                                                    ▼
    ┌─────────────┐                                    ┌──────────────┐
-   │ Unitree G1   │                                    │ Host Display  │
+   │ Unitree G1   │                                    │ Linux Display │
    │ Physical HW  │                                    │ (RViz2 GUI)   │
    └─────────────┘                                    └──────────────┘
 ```
@@ -141,7 +156,7 @@ no formal test files exist yet. When adding tests:
 ### `g1_control_nodes` — C++ (ament_cmake)
 
 - **Location**: `src/g1_control_nodes/`
-- **Node**: `G1ControlNode` — minimal scaffold, logs initialisation message
+- **Node**: `G1ControlNode` — minimal scaffold (`g1_control_node_lib` + `src/main.cpp`), logs initialisation message
 - **Executable**: `g1_control_node`
 - **Status**: Placeholder — awaiting joint-command implementation
 
@@ -153,9 +168,10 @@ no formal test files exist yet. When adding tests:
 |----------|---------------|-----|
 | `HOME` | `/workspace` | Prevents SIGSEGV from ROS log path resolution |
 | `ROS_LOG_DIR` | `/tmp` | Prevents permission crash writing to `//.ros/log` |
-| `RMW_IMPLEMENTATION` | `rmw_cyclonedds_cpp` | Unitree uses CycloneDDS 0.10.5 |
-| `CYCLONEDDS_URI` | `file:///workspace/config/cyclonedds_linux.xml` (Linux) or `file:///workspace/config/cyclonedds.xml` (macOS/UTM) | DDS peer discovery |
-| `LD_LIBRARY_PATH` | Must include `/opt/ros/humble/lib:/opt/cyclonedds/lib` | Runtime linking |
+| `RMW_IMPLEMENTATION` | `rmw_cyclonedds_cpp` | Unitree uses CycloneDDS 0.10.x |
+| `CYCLONEDDS_URI` | `file:///workspace/config/cyclonedds_linux.xml` (Linux robot runtime) or unset (headless) | DDS peer discovery |
+| `G1_HEADLESS` | `1` in `g1-dev-headless` / `g1_simulator` | Prevents `.bashrc` from binding to `enx6c6e072266fc` |
+| `LD_LIBRARY_PATH` | Must include `/opt/ros/humble/lib:/opt/cyclonedds/lib:/usr/local/lib` | Runtime linking |
 
 ---
 
@@ -174,20 +190,19 @@ no formal test files exist yet. When adding tests:
 
 | Service | Use Case | Command |
 |---------|----------|---------|
-| `g1-dev-linux` | Interactive dev (x86_64 Linux, `config/cyclonedds_linux.xml`) | `docker compose up -d g1-dev-linux` |
-| `g1-dev-mac` | Interactive dev (arm64 macOS, `config/cyclonedds.xml`) | `docker compose up -d g1-dev-mac` |
-| `g1_simulator` | Mock publisher for testing | Auto-runs `g1_mock_publisher.py` |
-| `g1_telemetry_listener` | Headless vis pipeline (`config/cyclonedds.xml`) | Auto-runs launch file |
+| `g1-dev-linux` | Interactive Linux dev (`x86_64` or `arm64`, `config/cyclonedds_linux.xml`) | `docker compose up -d g1-dev-linux` |
+| `g1-dev-headless` | Headless build & test (Linux & macOS, `G1_HEADLESS=1`, no `CYCLONEDDS_URI`) | `docker compose up -d g1-dev-headless` |
+| `g1_simulator` | Mock publisher for testing (`G1_HEADLESS=1`) | Auto-runs `g1_mock_publisher.py` |
+| `g1_telemetry_listener` | Headless vis pipeline (`config/cyclonedds_linux.xml`) | Auto-runs launch file |
 
 ---
 
 ## Networking
 
-- **Linux host**: `network_mode: host` (`--net=host`) + `ipc: host` + `privileged: true` + `/dev/shm` sharing for zero-copy DDS. Configure the USB Ethernet adapter `enx6c6e072266fc` (`"Wired connection 2"`) with static IPv4 `192.168.123.222/24`, blank gateway, and `ipv4.never-default yes` (G1 has no DHCP server). Uses `config/cyclonedds_linux.xml` (`<NetworkInterface name="enx6c6e072266fc"/>` and `<Peers>` `192.168.123.222`, `192.168.123.161`, `192.168.123.164`).
-- **macOS host**: CycloneDDS unicast over VM bridge; optionally Zenoh TCP via `rmw_zenoh_cpp`
-  - **CRITICAL**: The UTM VM usually has two NICs (`enp0s1` for bridge, `enp0s2` for robot). `config/cyclonedds.xml` MUST list the robot interface (`enp0s2`) FIRST and the bridge interface (`enp0s1`) SECOND, otherwise local node discovery or robot communication will fail.
-- **Robot IPs**: `192.168.123.161` (primary), `192.168.123.164` (secondary)
-- **Multicast**: SPDP only (`<AllowMulticast>spdp</AllowMulticast>`) with explicit unicast peer list in `config/cyclonedds_linux.xml` (Linux) and `config/cyclonedds.xml` (macOS/UTM)
+- **Linux host**: `network_mode: host` + `ipc: host` + `privileged: true` + `/dev/shm` sharing for zero-copy DDS. Configure the USB Ethernet adapter `enx6c6e072266fc` (`"Wired connection 2"`) with static IPv4 `192.168.123.222/24`, blank gateway, and `ipv4.never-default yes` (G1 has no DHCP server). Uses `config/cyclonedds_linux.xml` (`<NetworkInterface name="enx6c6e072266fc"/>` and `<Peers>` `192.168.123.222`, `192.168.123.161`, `192.168.123.164`).
+- **Onboard G1 PC2 (`linux/arm64`)**: `docker/pc2-realsense/cyclonedds_pc2.xml` configures CycloneDDS for the RealSense D435i container on `192.168.123.164`.
+- **Robot IPs**: `192.168.123.161` (primary / PC1), `192.168.123.164` (secondary / PC2)
+- **Multicast**: SPDP only (`<AllowMulticast>spdp</AllowMulticast>`) with explicit unicast peer list in `config/cyclonedds_linux.xml`
 
 ---
 

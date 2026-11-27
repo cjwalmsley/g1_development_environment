@@ -13,16 +13,18 @@ Standalone, lightweight ROS 2 Humble container for running the Intel RealSense D
   - `spatial_filter` and `temporal_filter` enabled
   - Pointcloud, IMU (`gyro`/`accel`), and IR streams disabled
 
-## 1. Build on x86_64 Linux Host & Deploy to PC2
+## 1. Build (`linux/arm64`) & Deploy to PC2
 
-From the repository root on your Linux PC:
+`build_and_export.sh` builds the `linux/arm64` image both on `x86_64` Linux (automatically registering QEMU `arm64` binfmt for cross-compilation) and natively on `arm64` hosts (ARM64 Linux or Apple Silicon macOS, skipping QEMU registration).
+
+From the repository root:
 
 ```bash
-# Direct build + stream over SSH to PC2 (unitree@192.168.123.164):
+# Direct build + stream over SSH to PC2 (unitree@192.168.123.164, requires network reachability to PC2):
 ./docker/pc2-realsense/build_and_export.sh --deploy unitree@192.168.123.164
 ```
 
-Or build and export a `.tar.gz` archive instead:
+Or build and export a `.tar.gz` archive on any Docker host (including macOS or offline Linux):
 
 ```bash
 ./docker/pc2-realsense/build_and_export.sh
