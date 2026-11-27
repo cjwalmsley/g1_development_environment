@@ -468,3 +468,19 @@ These are intended extensions described in the project goals but not yet impleme
 4. **Physical actuation** — The C++ `g1_control_node` is a scaffold; joint-command publishing needs implementation
 5. **Formal test suite** — Unit and integration tests for both packages
 6. **CI/CD pipeline** — No GitHub Actions or CI configuration exists yet
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked in GitHub Issues (`cjwalmsley/g1_development_environment`) via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role triage label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout (`GLOSSARY.md` and `docs/adr/` at the repo root). See `docs/agents/domain.md`.
